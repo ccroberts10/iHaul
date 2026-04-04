@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>iHaul</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-hero">
+    <div class="logo-big">i<span>Haul</span></div>
+    <p class="auth-tagline">Monetize the miles you're already driving.</p>
+  </div>
+  <div class="auth-card">
+    <div class="tab-switch">
+      <button class="tab-btn active" onclick="showTab('login')">Sign In</button>
+      <button class="tab-btn" onclick="showTab('register')">Create Account</button>
+    </div>
+    <div id="login-form">
+      <div class="field-group"><label>Email</label><input type="email" id="login-email" placeholder="you@email.com"></div>
+      <div class="field-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <div id="login-error" class="error-msg"></div>
+      <button class="btn-primary" onclick="login()">Sign In</button>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="field-group"><label>Full Name</label><input type="text" id="reg-name" placeholder="Casey Brown"></div>
+      <div class="field-group"><label>Email</label><input type="email" id="reg-email" placeholder="you@email.com"></div>
+      <div class="field-group"><label>Phone</label><input type="tel" id="reg-phone" placeholder="(970) 555-0100"></div>
+      <div class="field-group"><label>Password</label><input type="password" id="reg-password" placeholder="Min 8 characters"></div>
+      <div class="field-group">
+        <label>Vehicle (if driving)</label>
+        <select id="reg-vehicle">
+          <option value="">Not driving — shipper only</option>
+          <option value="sedan">Sedan / Hatchback</option>
+          <option value="suv">SUV / Crossover</option>
+          <option value="truck">Pickup Truck</option>
+          <option value="van">Van / Minivan</option>
+          <option value="cargo_van">Cargo Van</option>
+        </select>
+      </div>
+      <div id="reg-error" class="error-msg"></div>
+      <button class="btn-primary" onclick="register()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-screen" class="screen">
+  <div class="app-header">
+    <div class="header-logo">i<span>Haul</span></div>
+    <div class="header-user"><span id="header-name"></span><button class="btn-ghost" onclick="logout()">Out</button></div>
+  </div>
+  <div class="app-body">
+
+    <!-- HOME -->
+    <div id="view-home" class="view active">
+      <div class="home-hero">
+        <div class="home-greeting">Hey, <span id="home-name"></span> 👋</div>
+        <div class="home-sub">What do you need today?</div>
+      </div>
+      <div class="action-grid">
+        <div class="action-card shipper-card" onclick="showView('view-post')">
+          <div class="action-icon">📦</div>
+          <div class="action-title">I need something delivered</div>
+          <div class="action-sub">Post a job, set your price</div>
+        </div>
+        <div class="action-card driver-card" onclick="showView('view-drive')">
+          <div class="action-icon">🚗</div>
+          <div class="action-title">I'm making a drive</div>
+          <div class="action-sub">Post route or find deliveries</div>
+        </div>
+      </div>
+      <div class="section-head"><span>Active Jobs</span><button class="btn-ghost" onclick="loadMyJobs()">Refresh</button></div>
+      <div id="my-jobs-list" class="jobs-list"><div class="empty-state">Loading...</div></div>
+    </div>
+
+    <!-- POST A JOB -->
+    <div id="view-post" class="view">
+      <div class="view-header">
+        <button class="back-btn" onclick="showView('view-home')">← Back</button>
+        <h2>Post a Delivery</h2>
+      </div>
+
+      <!-- JOB TYPE PICKER -->
+      <div class="form-section">
+        <div class="form-section-title">What type of delivery?</div>
+        <div class="type-picker">
+          <div class="type-opt active" data-type="standard" onclick="selectJobType('standard', this)">
+            <span class="type-emoji">📦</span><span class="type-name">General</span>
+          </div>
+          <div class="type-opt" data-type="marketplace" onclick="selectJobType('marketplace', this)">
+            <span class="type-emoji">🛋️</span><span class="type-name">Marketplace</span>
+          </div>
+          <div class="type-opt" data-type="retail" onclick="selectJobType('retail', this)">
+            <span class="type-emoji">🚴</span><span class="type-name">Retail</span>
+          </div>
+          <div class="type-opt" data-type="errand" onclick="selectJobType('errand', this)">
+            <span class="type-emoji">🛍️</span><span class="type-name">Errand</span>
+          </div>
+          <div class="type-opt" data-type="business" onclick="selectJobType('business', this)">
+            <span class="type-emoji">🏢</span><span class="type-name">Business</span>
+          </div>
+        </div>
+        <div id="type-hint" class="type-hint">Standard delivery between two locations.</div>
+      </div>
+
+      <form id="post-form" onsubmit="postJob(event)">
+        <input type="hidden" id="job-type" value="standard">
+
+        <!-- MARKETPLACE FIELDS -->
+        <div id="marketplace-fields" class="form-section" style="display:none">
+          <div class="form-section-title">Seller & Buyer Details</div>
+          <div class="field-group"><label>Seller Name</label><input type="text" id="seller-name" placeholder="Who has the item?"></div>
+          <div class="field-group"><label>Seller Phone</label><input type="tel" id="seller-phone" placeholder="Driver will coordinate pickup"></div>
+          <div class="field-group"><label>Buyer Name</label><input type="text" id="buyer-name" placeholder="Who receives the item?"></div>
+          <div class="field-group"><label>Buyer Phone</label><input type="tel" id="buyer-phone" placeholder="Driver will coordinate dropoff"></div>
+          <div class="form-section-title" style="margin-top:16px;">Item Photos <span class="req">* Required for Marketplace</span></div>
+          <div class="photo-upload-row" id="listing-photo-row">
+            <div class="photo-add-btn" onclick="document.getElementById('listing-photos-input').click()">+</div>
+            <input type="file" id="listing-photos-input" class="photo-input" accept="image/*" multiple onchange="previewListingPhotos(this)">
+          </div>
+          <div style="font-size:11px; color:var(--gray); margin-top:6px;">Photos protect both parties and are shown to potential drivers</div>
+        </div>
+
+        <!-- ERRAND FIELDS -->
+        <div id="errand-fields" class="form-section" style="display:none">
+          <div class="form-section-title">Errand Details</div>
+          <div class="field-group"><label>Store / Location</label><input type="text" id="store-name" placeholder="Home Depot, Costco, DBP..."></div>
+          <div class="field-group"><label>What to pick up</label><textarea id="item-to-pickup" rows="2" placeholder="2x 8ft 2x4 lumber, receipt #12345..."></textarea></div>
+        </div>
+
+        <!-- ITEM DETAILS -->
+        <div class="form-section">
+          <div class="form-section-title">Item Details</div>
+          <div class="field-group">
+            <label>Title <span class="req">*</span></label>
+            <input type="text" id="job-title" placeholder="e.g. Sofa delivery, Coffee beans, Bike pickup" required>
+          </div>
+          <div class="field-group">
+            <label>Description</label>
+            <textarea id="job-desc" rows="2" placeholder="Any details the driver needs..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-group">
+              <label>Item Size <span class="req">*</span></label>
+              <select id="job-size" required>
+                <option value="">Select</option>
+                <option value="envelope">Envelope / Doc</option>
+                <option value="small_box">Small Box</option>
+                <option value="medium_box">Medium Box</option>
+                <option value="large_box">Large Box</option>
+                <option value="oversized">Oversized / Furniture</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>Weight (lbs)</label>
+              <input type="number" id="job-weight" placeholder="12" min="0" step="0.5">
+            </div>
+          </div>
+          <div class="toggle-row">
+            <label>Fragile?</label>
+            <label class="toggle"><input type="checkbox" id="job-fragile"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row" id="disassembly-row" style="display:none">
+            <label>Needs disassembly / reassembly?</label>
+            <label class="toggle"><input type="checkbox" id="job-disassembly"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- ROUTE -->
+        <div class="form-section">
+          <div class="form-section-title">Route</div>
+          <div class="field-group"><label>Pickup Address <span class="req">*</span></label><input type="text" id="job-pickup-addr" required placeholder="225 E 8th Ave"></div>
+          <div class="field-group"><label>Pickup City <span class="req">*</span></label><input type="text" id="job-pickup-city" required placeholder="Durango, CO"></div>
+          <div class="field-group"><label>Dropoff Address <span class="req">*</span></label><input type="text" id="job-dropoff-addr" required placeholder="123 Main St"></div>
+          <div class="field-group"><label>Dropoff City <span class="req">*</span></label><input type="text" id="job-dropoff-city" required placeholder="Telluride, CO"></div>
+        </div>
+
+        <!-- PRICING -->
+        <div class="form-section">
+          <div class="form-section-title">Your Offer to Driver</div>
+          <div class="field-group">
+            <div class="price-input-wrap">
+              <span class="price-dollar">$</span>
+              <input type="number" id="job-price" placeholder="28.00" min="5" step="0.50" required oninput="updatePriceBreakdown()">
+            </div>
+          </div>
+          <div id="price-breakdown" class="price-breakdown" style="display:none">
+            <div class="price-row"><span>Driver earns</span><span id="pb-driver" class="price-val green"></span></div>
+            <div class="price-row"><span>iHaul fee (25%)</span><span id="pb-fee" class="price-val muted"></span></div>
+            <div class="price-row total"><span>You pay total</span><span id="pb-total" class="price-val"></span></div>
+          </div>
+          <div class="field-group" style="margin-top:12px;"><label>Notes for driver</label><textarea id="job-notes" rows="2" placeholder="Meet at back entrance, call on arrival..."></textarea></div>
+        </div>
+
+        <div id="post-error" class="error-msg"></div>
+        <button type="submit" class="btn-primary btn-large">Post Delivery Job →</button>
+      </form>
+    </div>
+
+    <!-- DRIVE VIEW — post route + browse jobs -->
+    <div id="view-drive" class="view">
+      <div class="view-header">
+        <button class="back-btn" onclick="showView('view-home')">← Back</button>
+        <h2>Drive & Earn</h2>
+      </div>
+
+      <!-- MODE SWITCH -->
+      <div class="drive-mode-switch">
+        <button class="drive-mode-btn active" id="dmb-post" onclick="switchDriveMode('post')">📍 Post My Route</button>
+        <button class="drive-mode-btn" id="dmb-browse" onclick="switchDriveMode('browse')">🔍 Browse Jobs</button>
+      </div>
+
+      <!-- POST ROUTE PANEL -->
+      <div id="drive-post-panel">
+        <div class="form-section">
+          <div class="form-section-title">Announce your drive</div>
+          <div class="field-row">
+            <div class="field-group"><label>From <span class="req">*</span></label><input type="text" id="route-origin" placeholder="Durango, CO"></div>
+            <div class="field-group"><label>To <span class="req">*</span></label><input type="text" id="route-dest" placeholder="Telluride, CO"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label>Leaving at <span class="req">*</span></label><input type="datetime-local" id="route-depart"></div>
+            <div class="field-group"><label>Max detour</label>
+              <select id="route-detour">
+                <option value="5">5 minutes</option>
+                <option value="10">10 minutes</option>
+                <option value="15" selected>15 minutes</option>
+                <option value="20">20 minutes</option>
+                <option value="30">30 minutes</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group"><label>Vehicle / notes</label><input type="text" id="route-vehicle" placeholder="Toyota Tacoma, truck bed available"></div>
+          <div class="form-section-title" style="margin-top:16px;">What can you haul?</div>
+          <div class="haul-types">
+            <label class="haul-tag"><input type="checkbox" value="envelope" checked> Envelopes</label>
+            <label class="haul-tag"><input type="checkbox" value="small_box" checked> Small boxes</label>
+            <label class="haul-tag"><input type="checkbox" value="medium_box" checked> Medium boxes</label>
+            <label class="haul-tag"><input type="checkbox" value="large_box"> Large boxes</label>
+            <label class="haul-tag"><input type="checkbox" value="oversized"> Furniture / oversized</label>
+          </div>
+        </div>
+        <button class="btn-primary btn-large" onclick="postDriverRoute()">Post My Drive →</button>
+
+        <div class="section-head" style="margin-top:24px;"><span>Your Active Routes</span></div>
+        <div id="my-routes-list" class="jobs-list"><div class="empty-state">No active routes posted</div></div>
+      </div>
+
+      <!-- BROWSE PANEL -->
+      <div id="drive-browse-panel" style="display:none">
+        <div class="route-filter">
+          <div class="field-group" style="margin:0; flex:1"><input type="text" id="browse-destination" placeholder="Your destination (e.g. Telluride)"></div>
+          <button class="btn-primary btn-sm" onclick="browseAll()">Search</button>
+        </div>
+
+        <div class="section-head"><span>Available Drivers</span></div>
+        <div id="available-drivers" class="jobs-list"><div class="empty-state">Enter destination to see available drivers</div></div>
+
+        <div class="section-head" style="margin-top:20px;"><span>Open Deliveries</span></div>
+        <div id="browse-results" class="jobs-list"><div class="empty-state">Enter destination to see open jobs</div></div>
+      </div>
+    </div>
+
+    <!-- JOB DETAIL -->
+    <div id="view-job" class="view">
+      <div class="view-header">
+        <button class="back-btn" id="job-back-btn" onclick="showView('view-home')">← Back</button>
+        <h2>Delivery Details</h2>
+      </div>
+      <div id="job-detail-content"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="showView('view-home'); setNavActive(this)">
+      <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="showView('view-post'); setNavActive(this)">
+      <span class="nav-icon">📦</span><span class="nav-label">Send</span>
+    </button>
+    <button class="nav-item" onclick="showView('view-drive'); loadMyRoutes(); setNavActive(this)">
+      <span class="nav-icon">🚗</span><span class="nav-label">Drive</span>
+    </button>
+    <button class="nav-item" onclick="showView('view-home'); loadMyJobs(); setNavActive(this)">
+      <span class="nav-icon">📋</span><span class="nav-label">My Jobs</span>
+    </button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="https://js.stripe.com/v3/"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
