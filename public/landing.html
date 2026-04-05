@@ -14,12 +14,12 @@ body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif
 
 /* NAV */
 nav{
-  position:fixed;top:0;left:0;right:0;z-index:200;
-  padding:14px 20px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(8,8,8,0.92);
-  backdrop-filter:blur(10px);
-  border-bottom:0.5px solid rgba(255,255,255,0.08);
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(8,8,8,0.92);
+  backdrop-filter:blur(10px);
+  border-bottom:0.5px solid rgba(255,255,255,0.08);
 }
 .nav-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-1px;color:var(--white);text-decoration:none}
 .nav-logo span{color:var(--teal)}
@@ -27,77 +27,79 @@ nav{
 
 /* HERO */
 .hero{
-  min-height:100vh;
-  padding:100px 20px 60px;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  position:relative;overflow:hidden;
-  text-align:center;
+  min-height:100vh;
+  padding:110px 24px 60px;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+  text-align:center;
 }
 #hero-canvas{position:absolute;inset:0;z-index:0}
 .hero-overlay{position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 50% 30%,rgba(0,194,168,0.07) 0%,transparent 60%),linear-gradient(to bottom,rgba(8,8,8,0) 50%,rgba(8,8,8,1) 100%)}
 .hero-inner{position:relative;z-index:2;width:100%;max-width:680px}
-
 .badge{
-  display:inline-flex;align-items:center;gap:7px;
-  background:rgba(0,194,168,0.1);border:0.5px solid rgba(0,194,168,0.3);
-  border-radius:30px;padding:7px 16px;font-size:12px;color:var(--teal2);
-  margin-bottom:20px;
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(0,194,168,0.1);border:0.5px solid rgba(0,194,168,0.3);
+  border-radius:30px;padding:7px 16px;font-size:12px;color:var(--teal2);
+  margin-bottom:20px;text-align:left;
 }
 .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 2s ease infinite;flex-shrink:0}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
 
 .hero-headline{
-  font-family:'Syne',sans-serif;
-  font-size:clamp(34px,8vw,80px);
-  font-weight:800;line-height:1.0;
-  letter-spacing:-1.5px;
-  margin-bottom:18px;
+  font-family:'Syne',sans-serif;
+  font-size:clamp(34px,8vw,80px);
+  font-weight:800;line-height:1.05;
+  letter-spacing:-1.5px;
+  margin-bottom:18px;
+  text-align:left;
 }
 .hero-headline em{color:var(--teal);font-style:normal;display:block}
 
 .hero-sub{
-  font-size:clamp(14px,3.5vw,17px);
-  color:rgba(255,255,255,0.5);
-  line-height:1.65;
-  max-width:480px;
-  margin:0 auto 40px;
-  font-weight:300;
+  font-size:clamp(14px,3.5vw,17px);
+  color:rgba(255,255,255,0.5);
+  line-height:1.65;
+  max-width:480px;
+  margin:0 0 40px;
+  font-weight:300;
+  text-align:left;
 }
 
 /* CARDS */
 .cards{
-  display:flex;flex-direction:column;
-  gap:14px;width:100%;
+  display:flex;flex-direction:column;
+  gap:14px;width:100%;
 }
 @media(min-width:640px){
-  .cards{flex-direction:row;justify-content:center}
-  .card{width:280px;flex-shrink:0}
+  .cards{flex-direction:row;justify-content:center}
+  .card{width:280px;flex-shrink:0}
 }
 .card{
-  background:rgba(255,255,255,0.04);
-  border:0.5px solid rgba(255,255,255,0.1);
-  border-radius:18px;padding:24px;
-  text-align:left;text-decoration:none;
-  display:flex;flex-direction:column;
-  transition:transform 0.2s,border-color 0.2s;
+  background:#161616;
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:18px;padding:24px;
+  text-align:left;text-decoration:none;
+  display:flex;flex-direction:column;
+  transition:transform 0.2s,border-color 0.2s;
 }
 .card:hover{transform:translateY(-3px)}
-.card.driver{border-color:rgba(0,194,168,0.3)}
-.card.shipper{border-color:rgba(255,255,255,0.15)}
+.card.driver{border-color:rgba(0,194,168,0.4);background:#0e1a18}
+.card.shipper{border-color:rgba(255,255,255,0.15);background:#161616}
 .card-tag{font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:10px}
 .card-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--white);margin-bottom:8px;line-height:1.2}
 .card-sub{font-size:13px;color:rgba(255,255,255,0.45);line-height:1.55;margin-bottom:16px}
 .card-earn{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--teal)}
 .card-earn-sub{font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px;margin-bottom:16px}
 .card-btn{
-  display:block;width:100%;padding:11px;
-  background:var(--teal);color:#000;
-  border:none;border-radius:10px;
-  font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;
-  text-align:center;text-decoration:none;margin-top:auto;
+  display:block;width:100%;padding:12px;
+  background:var(--teal);color:#000;
+  border:none;border-radius:10px;
+  font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;
+  text-align:center;text-decoration:none;margin-top:auto;
+  font-weight:600;
 }
-.card-btn.outline{background:transparent;color:var(--white);border:0.5px solid rgba(255,255,255,0.2)}
+.card-btn.outline{background:rgba(255,255,255,0.08);color:var(--white);border:0.5px solid rgba(255,255,255,0.25)}
 
 /* HOW IT WORKS */
 .how{background:var(--black);padding:90px 20px}
@@ -171,115 +173,115 @@ footer{background:#050505;border-top:0.5px solid rgba(255,255,255,0.06);padding:
 <body>
 
 <nav>
-  <a href="/" class="nav-logo">De<span>tour</span></a>
-  <a href="/app" class="nav-cta">Get Started →</a>
+  <a href="/" class="nav-logo">De<span>tour</span></a>
+  <a href="/app" class="nav-cta">Get Started →</a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <canvas id="hero-canvas"></canvas>
-  <div class="hero-overlay"></div>
-  <div class="hero-inner">
-    <div class="badge"><div class="badge-dot"></div>Now live in Durango, Colorado</div>
-    <h1 class="hero-headline">Every drive is<em>an opportunity.</em></h1>
-    <p class="hero-sub">Detour connects commuters with people who need things delivered. Earn on drives you're already making — or get anything delivered by someone already headed your way.</p>
-    <div class="cards">
-      <a href="/app" class="card driver">
-        <div class="card-tag">🚗 For drivers</div>
-        <div class="card-title">Turn your commute into cash</div>
-        <div class="card-sub">Heading to Telluride? Albuquerque? Pick up a delivery along the way.</div>
-        <div class="card-earn">$20 – $80</div>
-        <div class="card-earn-sub">per delivery · paid to your bank</div>
-        <div class="card-btn">Start earning →</div>
-      </a>
-      <a href="/app" class="card shipper">
-        <div class="card-tag">📦 For shippers</div>
-        <div class="card-title">Get anything delivered today</div>
-        <div class="card-sub">Post a job, set your price. A commuter already heading that way picks it up.</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.4);line-height:1.6;margin-bottom:16px;">Works for Marketplace sales, business deliveries, retail pickups and more.</div>
-        <div class="card-btn outline">Post a delivery →</div>
-      </a>
-    </div>
-  </div>
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-overlay"></div>
+  <div class="hero-inner">
+    <div class="badge"><div class="badge-dot"></div>Now live in Durango, Colorado</div>
+    <h1 class="hero-headline">Every drive is<em>an opportunity.</em></h1>
+    <p class="hero-sub">Detour connects commuters with people who need things delivered. Earn on drives you're already making — or get anything delivered by someone already headed your way.</p>
+    <div class="cards">
+      <a href="/app" class="card driver">
+        <div class="card-tag">🚗 For drivers</div>
+        <div class="card-title">Turn your commute into cash</div>
+        <div class="card-sub">Heading to Telluride? Albuquerque? Pick up a delivery along the way.</div>
+        <div class="card-earn">$20 – $80</div>
+        <div class="card-earn-sub">per delivery · paid to your bank</div>
+        <div class="card-btn">Start earning →</div>
+      </a>
+      <a href="/app" class="card shipper">
+        <div class="card-tag">📦 For shippers</div>
+        <div class="card-title">Get anything delivered today</div>
+        <div class="card-sub">Post a job, set your price. A commuter already heading that way picks it up.</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.4);line-height:1.6;margin-bottom:16px;">Works for Marketplace sales, business deliveries, retail pickups and more.</div>
+        <div class="card-btn outline">Post a delivery →</div>
+      </a>
+    </div>
+  </div>
 </section>
 
 <!-- HOW IT WORKS -->
 <section class="how">
-  <div class="section-label">How it works</div>
-  <h2 class="section-title reveal">Simple for everyone.</h2>
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('driver',this)">I'm a driver</button>
-    <button class="tab" onclick="switchTab('shipper',this)">I need delivery</button>
-  </div>
-  <div class="steps active" id="driver-steps">
-    <div class="step reveal"><div class="step-num">1</div><h3>Enter your destination</h3><p>Tell Detour where you're heading and when you're leaving.</p></div>
-    <div class="step reveal d1"><div class="step-num">2</div><h3>See matched jobs</h3><p>We surface deliveries along your route. See the payout before you commit.</p></div>
-    <div class="step reveal d2"><div class="step-num">3</div><h3>Accept & coordinate</h3><p>Message the shipper, arrange a quick pickup, and go.</p></div>
-    <div class="step reveal d3"><div class="step-num">4</div><h3>Get paid</h3><p>Deliver, confirm, and Stripe deposits your earnings straight to your bank.</p></div>
-  </div>
-  <div class="steps" id="shipper-steps">
-    <div class="step"><div class="step-num">1</div><h3>Post your delivery</h3><p>Describe the item, route, and how much you're offering. 60 seconds.</p></div>
-    <div class="step"><div class="step-num">2</div><h3>Get matched</h3><p>A commuter heading your way accepts. See their rating and vehicle first.</p></div>
-    <div class="step"><div class="step-num">3</div><h3>Coordinate pickup</h3><p>Message in-app to arrange handoff. Photos at pickup protect both parties.</p></div>
-    <div class="step"><div class="step-num">4</div><h3>Confirm & done</h3><p>Confirm delivery to release payment. Insured and tracked end to end.</p></div>
-  </div>
+  <div class="section-label">How it works</div>
+  <h2 class="section-title reveal">Simple for everyone.</h2>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('driver',this)">I'm a driver</button>
+    <button class="tab" onclick="switchTab('shipper',this)">I need delivery</button>
+  </div>
+  <div class="steps active" id="driver-steps">
+    <div class="step reveal"><div class="step-num">1</div><h3>Enter your destination</h3><p>Tell Detour where you're heading and when you're leaving.</p></div>
+    <div class="step reveal d1"><div class="step-num">2</div><h3>See matched jobs</h3><p>We surface deliveries along your route. See the payout before you commit.</p></div>
+    <div class="step reveal d2"><div class="step-num">3</div><h3>Accept & coordinate</h3><p>Message the shipper, arrange a quick pickup, and go.</p></div>
+    <div class="step reveal d3"><div class="step-num">4</div><h3>Get paid</h3><p>Deliver, confirm, and Stripe deposits your earnings straight to your bank.</p></div>
+  </div>
+  <div class="steps" id="shipper-steps">
+    <div class="step"><div class="step-num">1</div><h3>Post your delivery</h3><p>Describe the item, route, and how much you're offering. 60 seconds.</p></div>
+    <div class="step"><div class="step-num">2</div><h3>Get matched</h3><p>A commuter heading your way accepts. See their rating and vehicle first.</p></div>
+    <div class="step"><div class="step-num">3</div><h3>Coordinate pickup</h3><p>Message in-app to arrange handoff. Photos at pickup protect both parties.</p></div>
+    <div class="step"><div class="step-num">4</div><h3>Confirm & done</h3><p>Confirm delivery to release payment. Insured and tracked end to end.</p></div>
+  </div>
 </section>
 
 <!-- USE CASES -->
 <section class="uses">
-  <div class="section-label">What people use Detour for</div>
-  <h2 class="section-title reveal">Every kind of delivery.<br>One platform.</h2>
-  <div class="use-grid">
-    <div class="use-card reveal">
-      <span class="use-icon">🛋️</span>
-      <h3>Marketplace & Craigslist</h3>
-      <p>Sold a sofa on Facebook Marketplace but neither party has a truck? Post it on Detour.</p>
-      <div class="use-example">"Sold a dining table to someone in Bayfield — a driver heading that way delivered it for $30."</div>
-    </div>
-    <div class="use-card reveal d1">
-      <span class="use-icon">☕</span>
-      <h3>Local Business Deliveries</h3>
-      <p>Coffee roasters, breweries, farms moving product between towns without driving it themselves.</p>
-      <div class="use-example">"Our beans get to Telluride every Friday with a driver already making the trip."</div>
-    </div>
-    <div class="use-card reveal d2">
-      <span class="use-icon">🚴</span>
-      <h3>Retail & Shop Pickups</h3>
-      <p>Bought a bike at DBP but have a Subaru? We'll get it to your door.</p>
-      <div class="use-example">"Picked up my new bike from the shop without figuring out how to fit it in my car."</div>
-    </div>
-  </div>
+  <div class="section-label">What people use Detour for</div>
+  <h2 class="section-title reveal">Every kind of delivery.<br>One platform.</h2>
+  <div class="use-grid">
+    <div class="use-card reveal">
+      <span class="use-icon">🛋️</span>
+      <h3>Marketplace & Craigslist</h3>
+      <p>Sold a sofa on Facebook Marketplace but neither party has a truck? Post it on Detour.</p>
+      <div class="use-example">"Sold a dining table to someone in Bayfield — a driver heading that way delivered it for $30."</div>
+    </div>
+    <div class="use-card reveal d1">
+      <span class="use-icon">☕</span>
+      <h3>Local Business Deliveries</h3>
+      <p>Coffee roasters, breweries, farms moving product between towns without driving it themselves.</p>
+      <div class="use-example">"Our beans get to Telluride every Friday with a driver already making the trip."</div>
+    </div>
+    <div class="use-card reveal d2">
+      <span class="use-icon">🚴</span>
+      <h3>Retail & Shop Pickups</h3>
+      <p>Bought a bike at DBP but have a Subaru? We'll get it to your door.</p>
+      <div class="use-example">"Picked up my new bike from the shop without figuring out how to fit it in my car."</div>
+    </div>
+  </div>
 </section>
 
 <!-- STATS -->
 <section class="stats">
-  <div class="stats-grid">
-    <div class="reveal"><div class="stat-num">$20–80</div><div class="stat-label">Average driver earnings per delivery</div></div>
-    <div class="reveal d1"><div class="stat-num">25 min</div><div class="stat-label">Average time from post to driver match</div></div>
-    <div class="reveal d2"><div class="stat-num">75%</div><div class="stat-label">Of every payment goes straight to the driver</div></div>
-  </div>
+  <div class="stats-grid">
+    <div class="reveal"><div class="stat-num">$20–80</div><div class="stat-label">Average driver earnings per delivery</div></div>
+    <div class="reveal d1"><div class="stat-num">25 min</div><div class="stat-label">Average time from post to driver match</div></div>
+    <div class="reveal d2"><div class="stat-num">75%</div><div class="stat-label">Of every payment goes straight to the driver</div></div>
+  </div>
 </section>
 
 <!-- CTA -->
 <section class="cta">
-  <h2 class="cta-title reveal">Ready to make your<br>next drive count? <span>→</span></h2>
-  <p class="cta-sub reveal">Join Durango's commuter delivery network. Free to sign up.</p>
-  <div class="cta-btns reveal">
-    <a href="/app" class="cta-btn-p">Start earning on your drive</a>
-    <a href="/app" class="cta-btn-s">Post a delivery</a>
-  </div>
-  <div class="cta-loc reveal">Launching in <span>Durango, CO</span> · Telluride · Albuquerque · expanding soon</div>
+  <h2 class="cta-title reveal">Ready to make your<br>next drive count? <span>→</span></h2>
+  <p class="cta-sub reveal">Join Durango's commuter delivery network. Free to sign up.</p>
+  <div class="cta-btns reveal">
+    <a href="/app" class="cta-btn-p">Start earning on your drive</a>
+    <a href="/app" class="cta-btn-s">Post a delivery</a>
+  </div>
+  <div class="cta-loc reveal">Launching in <span>Durango, CO</span> · Telluride · Albuquerque · expanding soon</div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">De<span>tour</span></div>
-  <div class="footer-links">
-    <a href="/app">Sign In</a>
-    <a href="/app">Create Account</a>
-    <a href="mailto:hello@detourdeliver.com">Contact</a>
-  </div>
-  <div class="footer-copy">© 2025 Detour · detourdeliver.com</div>
+  <div class="footer-logo">De<span>tour</span></div>
+  <div class="footer-links">
+    <a href="/app">Sign In</a>
+    <a href="/app">Create Account</a>
+    <a href="mailto:hello@detourdeliver.com">Contact</a>
+  </div>
+  <div class="footer-copy">© 2025 Detour · detourdeliver.com</div>
 </footer>
 
 <script>
@@ -289,17 +291,17 @@ const ctx=canvas.getContext('2d');
 let particles=[],W,H;
 function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
 function Particle(){
-  this.reset=function(){this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;this.r=Math.random()*1.4+.2;this.a=Math.random()*.35+.05;this.teal=Math.random()>.65}
-  this.reset();
-  this.update=function(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>W||this.y<0||this.y>H)this.reset()}
-  this.draw=function(){ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=this.teal?`rgba(0,194,168,${this.a})`:`rgba(255,255,255,${this.a})`;ctx.fill()}
+  this.reset=function(){this.x=Math.random()*W;this.y=Math.random()*H;this.vx=(Math.random()-.5)*.35;this.vy=(Math.random()-.5)*.35;this.r=Math.random()*1.4+.2;this.a=Math.random()*.35+.05;this.teal=Math.random()>.65}
+  this.reset();
+  this.update=function(){this.x+=this.vx;this.y+=this.vy;if(this.x<0||this.x>W||this.y<0||this.y>H)this.reset()}
+  this.draw=function(){ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=this.teal?`rgba(0,194,168,${this.a})`:`rgba(255,255,255,${this.a})`;ctx.fill()}
 }
 function init(){particles=[];const n=Math.min(Math.floor(W*H/9000),120);for(let i=0;i<n;i++)particles.push(new Particle())}
 function connect(){
-  for(let i=0;i<particles.length;i++)for(let j=i+1;j<particles.length;j++){
-    const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,d=Math.sqrt(dx*dx+dy*dy);
-    if(d<110){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`rgba(0,194,168,${(1-d/110)*.07})`;ctx.lineWidth=.5;ctx.stroke()}
-  }
+  for(let i=0;i<particles.length;i++)for(let j=i+1;j<particles.length;j++){
+    const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<110){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`rgba(0,194,168,${(1-d/110)*.07})`;ctx.lineWidth=.5;ctx.stroke()}
+  }
 }
 function loop(){ctx.clearRect(0,0,W,H);connect();particles.forEach(p=>{p.update();p.draw()});requestAnimationFrame(loop)}
 resize();init();loop();
@@ -307,10 +309,10 @@ window.addEventListener('resize',()=>{resize();init()});
 
 // Tabs
 function switchTab(tab,btn){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('driver-steps').classList.toggle('active',tab==='driver');
-  document.getElementById('shipper-steps').classList.toggle('active',tab==='shipper');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('driver-steps').classList.toggle('active',tab==='driver');
+  document.getElementById('shipper-steps').classList.toggle('active',tab==='shipper');
 }
 
 // Scroll reveal
