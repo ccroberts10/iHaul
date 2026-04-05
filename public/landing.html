@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detour — Make money on drives you're already doing</title>
+<meta name="description" content="Detour matches everyday commuters with people who need things delivered. Earn $20–$80 on drives you're already making. Launching in Durango, CO.">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--teal:#00C2A8;--teal2:#00DDB8;--black:#080808;--dark:#0F0F0F;--white:#fff;--gray:#888}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;overflow-x:hidden}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:20px 48px;display:flex;align-items:center;justify-content:space-between;transition:background 0.3s}
+nav.scrolled{background:rgba(8,8,8,0.95);backdrop-filter:blur(12px);border-bottom:0.5px solid rgba(255,255,255,0.07)}
+.nav-logo{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-1px;color:var(--white);text-decoration:none}
+.nav-logo span{color:var(--teal)}
+.nav-cta{background:var(--teal);color:var(--black);padding:10px 24px;border-radius:30px;font-size:14px;font-weight:500;text-decoration:none;transition:all 0.2s;font-family:'DM Sans',sans-serif}
+.nav-cta:hover{background:var(--teal2);transform:translateY(-1px)}
+
+/* ── HERO ── */
+.hero{height:100vh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:0 24px}
+
+/* Animated canvas background */
+#hero-canvas{position:absolute;inset:0;z-index:0}
+
+/* Gradient overlay */
+.hero-overlay{position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 50% 0%,rgba(0,194,168,0.08) 0%,transparent 60%),linear-gradient(to bottom,rgba(8,8,8,0) 0%,rgba(8,8,8,0.3) 60%,rgba(8,8,8,1) 100%)}
+
+.hero-content{position:relative;z-index:2;text-align:center;max-width:1000px}
+
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,194,168,0.1);border:0.5px solid rgba(0,194,168,0.3);border-radius:30px;padding:8px 18px;font-size:13px;color:var(--teal2);margin-bottom:32px;animation:fadeUp 0.8s ease both}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s ease infinite}
+
+.hero-headline{font-family:'Syne',sans-serif;font-size:clamp(44px,7vw,88px);font-weight:800;line-height:1.0;letter-spacing:-3px;margin-bottom:24px;animation:fadeUp 0.8s ease 0.1s both}
+.hero-headline .line2{color:var(--teal)}
+
+.hero-sub{font-size:clamp(16px,2vw,20px);color:rgba(255,255,255,0.55);line-height:1.6;max-width:560px;margin:0 auto 48px;font-weight:300;animation:fadeUp 0.8s ease 0.2s both}
+
+/* Split CTA */
+.hero-split{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;animation:fadeUp 0.8s ease 0.3s both}
+.hero-card{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:20px;padding:28px 32px;text-align:left;width:300px;transition:all 0.3s;cursor:pointer;text-decoration:none;display:block}
+.hero-card:hover{background:rgba(255,255,255,0.07);border-color:rgba(0,194,168,0.4);transform:translateY(-4px)}
+.hero-card.driver{border-color:rgba(0,194,168,0.25)}
+.hero-card.shipper{border-color:rgba(255,255,255,0.12)}
+.hc-tag{font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--teal);margin-bottom:12px}
+.hc-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--white);margin-bottom:8px;line-height:1.2}
+.hc-sub{font-size:14px;color:rgba(255,255,255,0.5);line-height:1.5;margin-bottom:20px}
+.hc-earn{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--teal)}
+.hc-earn-label{font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px}
+.hc-btn{margin-top:20px;width:100%;padding:12px;background:var(--teal);color:var(--black);border:none;border-radius:10px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;text-align:center;display:block;text-decoration:none}
+.hc-btn:hover{background:var(--teal2)}
+.hc-btn.outline{background:transparent;color:var(--white);border:0.5px solid rgba(255,255,255,0.2)}
+.hc-btn.outline:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.4)}
+
+.hero-scroll{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;animation:fadeUp 1s ease 0.8s both}
+.scroll-label{font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase}
+.scroll-line{width:1px;height:40px;background:linear-gradient(to bottom,rgba(0,194,168,0.6),transparent);animation:scrollPulse 2s ease infinite}
+
+/* ── HOW IT WORKS ── */
+.how{background:var(--black);padding:120px 48px}
+.section-label{font-family:'Syne',sans-serif;font-size:11px;letter-spacing:0.15em;color:var(--teal);text-transform:uppercase;margin-bottom:16px;text-align:center}
+.section-title{font-family:'Syne',sans-serif;font-size:clamp(36px,5vw,56px);font-weight:800;letter-spacing:-2px;text-align:center;line-height:1.05;margin-bottom:80px}
+
+.how-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:64px}
+.how-tab{padding:10px 24px;border-radius:30px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);transition:all 0.2s}
+.how-tab.active{background:var(--teal);color:var(--black);border-color:var(--teal)}
+
+.how-steps{display:none;max-width:960px;margin:0 auto}
+.how-steps.active{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+
+.how-step{text-align:center;padding:0 16px}
+.step-num-wrap{width:56px;height:56px;background:rgba(0,194,168,0.1);border:0.5px solid rgba(0,194,168,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--teal)}
+.how-step h3{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:10px;line-height:1.2}
+.how-step p{font-size:14px;color:rgba(255,255,255,0.5);line-height:1.6}
+
+.step-connector{display:flex;align-items:center;padding-top:28px}
+.step-connector-line{flex:1;height:1px;background:linear-gradient(to right,rgba(0,194,168,0.4),rgba(0,194,168,0.1))}
+
+/* ── USE CASES ── */
+.uses{background:#0A0A0A;padding:100px 48px}
+.uses-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1100px;margin:0 auto}
+.use-card{background:#111;border:0.5px solid rgba(255,255,255,0.07);border-radius:20px;padding:36px 28px;transition:all 0.3s;position:relative;overflow:hidden}
+.use-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--teal),transparent);opacity:0;transition:opacity 0.3s}
+.use-card:hover{border-color:rgba(0,194,168,0.25);transform:translateY(-4px)}
+.use-card:hover::before{opacity:1}
+.use-icon{font-size:36px;margin-bottom:20px;display:block}
+.use-card h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px}
+.use-card p{font-size:14px;color:rgba(255,255,255,0.5);line-height:1.7}
+.use-example{margin-top:16px;padding:12px 14px;background:rgba(0,194,168,0.06);border-radius:8px;font-size:13px;color:rgba(255,255,255,0.6);line-height:1.5;border-left:2px solid rgba(0,194,168,0.4)}
+
+/* ── STATS ── */
+.stats{background:var(--teal);padding:80px 48px}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;max-width:900px;margin:0 auto;text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-size:clamp(48px,6vw,72px);font-weight:800;color:var(--black);line-height:1}
+.stat-label{font-size:15px;color:rgba(0,0,0,0.6);margin-top:8px}
+
+/* ── CTA ── */
+.cta-section{background:var(--black);padding:140px 48px;text-align:center;position:relative;overflow:hidden}
+.cta-section::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,194,168,0.08) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta-title{font-family:'Syne',sans-serif;font-size:clamp(40px,6vw,72px);font-weight:800;letter-spacing:-2.5px;line-height:1.05;margin-bottom:20px;position:relative}
+.cta-title span{color:var(--teal)}
+.cta-sub{font-size:18px;color:rgba(255,255,255,0.45);margin-bottom:48px;position:relative}
+.cta-buttons{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative}
+.cta-btn-primary{background:var(--teal);color:var(--black);padding:16px 40px;border-radius:60px;font-size:16px;font-weight:500;text-decoration:none;transition:all 0.2s;font-family:'DM Sans',sans-serif}
+.cta-btn-primary:hover{background:var(--teal2);transform:translateY(-2px)}
+.cta-btn-secondary{background:transparent;color:var(--white);padding:16px 40px;border-radius:60px;font-size:16px;font-weight:500;text-decoration:none;border:0.5px solid rgba(255,255,255,0.2);transition:all 0.2s;font-family:'DM Sans',sans-serif}
+.cta-btn-secondary:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.4)}
+.cta-location{margin-top:24px;font-size:13px;color:rgba(255,255,255,0.25);position:relative}
+.cta-location span{color:var(--teal)}
+
+/* ── FOOTER ── */
+footer{background:#050505;border-top:0.5px solid rgba(255,255,255,0.06);padding:40px 48px;display:flex;align-items:center;justify-content:space-between}
+.footer-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-1px;color:rgba(255,255,255,0.3)}
+.footer-logo span{color:rgba(0,194,168,0.4)}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:13px;color:rgba(255,255,255,0.25);text-decoration:none;transition:color 0.2s}
+.footer-links a:hover{color:rgba(255,255,255,0.5)}
+.footer-copy{font-size:12px;color:rgba(255,255,255,0.2)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+@keyframes scrollPulse{0%,100%{opacity:0.6;transform:scaleY(1)}50%{opacity:1;transform:scaleY(1.1)}}
+
+.reveal{opacity:0;transform:translateY(32px);transition:opacity 0.7s ease,transform 0.7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:0.1s}
+.reveal-delay-2{transition-delay:0.2s}
+.reveal-delay-3{transition-delay:0.3s}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  nav{padding:16px 24px}
+  .hero-split{flex-direction:column;align-items:center}
+  .hero-card{width:100%;max-width:340px}
+  .how{padding:80px 24px}
+  .how-steps.active{grid-template-columns:1fr 1fr;gap:32px}
+  .uses{padding:80px 24px}
+  .uses-grid{grid-template-columns:1fr}
+  .stats{padding:60px 24px}
+  .stats-grid{grid-template-columns:1fr;gap:32px}
+  .cta-section{padding:100px 24px}
+  footer{flex-direction:column;gap:20px;text-align:center;padding:32px 24px}
+  .footer-links{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="/" class="nav-logo">De<span>tour</span></a>
+  <a href="/app" class="nav-cta">Get Started →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-badge">🗺️ Now live in Durango, Colorado</div>
+    <h1 class="hero-headline">
+      Every drive is<br><span class="line2">an opportunity.</span>
+    </h1>
+    <p class="hero-sub">Detour connects everyday commuters with people who need things delivered. Earn on drives you're already making. Get anything delivered by someone already headed your way.</p>
+
+    <div class="hero-split">
+      <a href="/app" class="hero-card driver">
+        <div class="hc-tag">🚗 For drivers</div>
+        <div class="hc-title">Turn your commute into cash</div>
+        <div class="hc-sub">Heading to Telluride? Albuquerque? Pick up a delivery along the way.</div>
+        <div class="hc-earn">$20 – $80</div>
+        <div class="hc-earn-label">per delivery · paid to your bank</div>
+        <div class="hc-btn">Start earning →</div>
+      </a>
+      <a href="/app" class="hero-card shipper">
+        <div class="hc-tag">📦 For shippers</div>
+        <div class="hc-title">Get anything delivered today</div>
+        <div class="hc-sub">Post a job, set your price. A commuter already heading that way picks it up.</div>
+        <div style="margin-top:8px;">
+          <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;">Works for Marketplace sales, business deliveries, retail pickups, personal errands and more.</div>
+        </div>
+        <div class="hc-btn outline" style="margin-top:20px;">Post a delivery →</div>
+      </a>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-label">Scroll</div>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title reveal">Simple for everyone.</h2>
+
+  <div class="how-tabs">
+    <button class="how-tab active" onclick="switchTab('driver')">I'm a driver</button>
+    <button class="how-tab" onclick="switchTab('shipper')">I need delivery</button>
+  </div>
+
+  <div class="how-steps active" id="driver-steps">
+    <div class="how-step reveal reveal-delay-1">
+      <div class="step-num-wrap">1</div>
+      <h3>Enter your destination</h3>
+      <p>Tell Detour where you're heading and when you're leaving.</p>
+    </div>
+    <div class="how-step reveal reveal-delay-2">
+      <div class="step-num-wrap">2</div>
+      <h3>See matched deliveries</h3>
+      <p>We surface jobs along your exact route. You see the payout before you commit.</p>
+    </div>
+    <div class="how-step reveal reveal-delay-3">
+      <div class="step-num-wrap">3</div>
+      <h3>Accept & coordinate</h3>
+      <p>Message the shipper, arrange a quick pickup, and go.</p>
+    </div>
+    <div class="how-step reveal" style="transition-delay:0.4s">
+      <div class="step-num-wrap">4</div>
+      <h3>Get paid</h3>
+      <p>Deliver, get confirmed, and Stripe deposits 75% of the job straight to your bank.</p>
+    </div>
+  </div>
+
+  <div class="how-steps" id="shipper-steps">
+    <div class="how-step">
+      <div class="step-num-wrap">1</div>
+      <h3>Post your delivery</h3>
+      <p>Describe the item, route, and how much you're offering. Takes 60 seconds.</p>
+    </div>
+    <div class="how-step">
+      <div class="step-num-wrap">2</div>
+      <h3>Get matched</h3>
+      <p>A commuter already heading your way accepts the job. You'll see their rating and vehicle.</p>
+    </div>
+    <div class="how-step">
+      <div class="step-num-wrap">3</div>
+      <h3>Coordinate pickup</h3>
+      <p>Message in-app to arrange handoff. Photos taken at pickup protect both parties.</p>
+    </div>
+    <div class="how-step">
+      <div class="step-num-wrap">4</div>
+      <h3>Confirm & done</h3>
+      <p>Confirm delivery in the app to release payment. Fully insured, fully tracked.</p>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="uses">
+  <div class="section-label">What people use Detour for</div>
+  <h2 class="section-title reveal">Every kind of delivery.<br>One platform.</h2>
+  <div class="uses-grid">
+    <div class="use-card reveal reveal-delay-1">
+      <span class="use-icon">🛋️</span>
+      <h3>Marketplace & Craigslist</h3>
+      <p>Sold a sofa on Facebook Marketplace but neither party has a truck? Post it on Detour.</p>
+      <div class="use-example">"Sold a dining table to someone in Bayfield — driver heading that way delivered it for $30."</div>
+    </div>
+    <div class="use-card reveal reveal-delay-2">
+      <span class="use-icon">☕</span>
+      <h3>Local Business Deliveries</h3>
+      <p>Coffee roasters, breweries, farms, and makers moving product between towns without driving it themselves.</p>
+      <div class="use-example">"Our beans get to Telluride every Friday with a driver who was already making the trip."</div>
+    </div>
+    <div class="use-card reveal reveal-delay-3">
+      <span class="use-icon">🚴</span>
+      <h3>Retail & Shop Pickups</h3>
+      <p>Bought a bike at DBP but have a Subaru? We'll get it to your door.</p>
+      <div class="use-example">"Picked up my new bike from the shop without having to figure out how to fit it in my car."</div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="stats-grid">
+    <div class="reveal">
+      <div class="stat-num">$20–80</div>
+      <div class="stat-label">Average driver earnings per delivery</div>
+    </div>
+    <div class="reveal reveal-delay-1">
+      <div class="stat-num">25 min</div>
+      <div class="stat-label">Average time from post to driver match</div>
+    </div>
+    <div class="reveal reveal-delay-2">
+      <div class="stat-num">75%</div>
+      <div class="stat-label">Of every payment goes straight to the driver</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title reveal">Ready to make your<br>next drive count? <span>→</span></h2>
+  <p class="cta-sub reveal">Join Durango's commuter delivery network. Free to sign up.</p>
+  <div class="cta-buttons reveal">
+    <a href="/app" class="cta-btn-primary">Start earning on your drive</a>
+    <a href="/app" class="cta-btn-secondary">Post a delivery</a>
+  </div>
+  <div class="cta-location reveal">Launching in <span>Durango, CO</span> · Telluride · Albuquerque · expanding soon</div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">De<span>tour</span></div>
+  <div class="footer-links">
+    <a href="/app">Sign In</a>
+    <a href="/app">Create Account</a>
+    <a href="mailto:hello@detourdeliver.com">Contact</a>
+  </div>
+  <div class="footer-copy">© 2025 Detour · detourdeliver.com</div>
+</footer>
+
+<script>
+// ── CANVAS ANIMATION ──
+const canvas = document.getElementById('hero-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [], w, h, animFrame;
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+
+function Particle() {
+  this.reset = function() {
+    this.x = Math.random() * w;
+    this.y = Math.random() * h;
+    this.vx = (Math.random() - 0.5) * 0.4;
+    this.vy = (Math.random() - 0.5) * 0.4;
+    this.radius = Math.random() * 1.5 + 0.3;
+    this.alpha = Math.random() * 0.4 + 0.05;
+    this.color = Math.random() > 0.7 ? '0,194,168' : '255,255,255';
+  };
+  this.reset();
+  this.update = function() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if(this.x < 0 || this.x > w || this.y < 0 || this.y > h) this.reset();
+  };
+  this.draw = function() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${this.color},${this.alpha})`;
+    ctx.fill();
+  };
+}
+
+function initParticles() {
+  particles = [];
+  const count = Math.floor((w * h) / 8000);
+  for(let i = 0; i < count; i++) particles.push(new Particle());
+}
+
+function drawConnections() {
+  const maxDist = 120;
+  for(let i = 0; i < particles.length; i++) {
+    for(let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if(dist < maxDist) {
+        const alpha = (1 - dist / maxDist) * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0,194,168,${alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, w, h);
+  drawConnections();
+  particles.forEach(p => { p.update(); p.draw(); });
+  animFrame = requestAnimationFrame(animate);
+}
+
+resize();
+initParticles();
+animate();
+window.addEventListener('resize', () => { resize(); initParticles(); });
+
+// ── NAV SCROLL ──
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 40);
+});
+
+// ── HOW IT WORKS TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.how-tab').forEach((t, i) => {
+    t.classList.toggle('active', (tab === 'driver' && i === 0) || (tab === 'shipper' && i === 1));
+  });
+  document.getElementById('driver-steps').classList.toggle('active', tab === 'driver');
+  document.getElementById('shipper-steps').classList.toggle('active', tab === 'shipper');
+}
+
+// ── SCROLL REVEAL ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
