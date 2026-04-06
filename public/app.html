@@ -194,6 +194,12 @@ textarea{resize:none}
           </select>
         </div>
         <div id="reg-error" class="error-msg"></div>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin:10px 0;background:var(--dark2);border-radius:var(--rs);padding:12px 14px;">
+          <input type="checkbox" id="reg-terms" style="margin-top:3px;width:16px;height:16px;accent-color:var(--teal);flex-shrink:0;cursor:pointer;">
+          <label for="reg-terms" style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.5;cursor:pointer;text-transform:none;letter-spacing:0;">
+            I agree to Detour's <a href="/terms" target="_blank" style="color:var(--teal);text-decoration:none;">Terms of Service</a> and <a href="/privacy" target="_blank" style="color:var(--teal);text-decoration:none;">Privacy Policy</a>. I understand Detour is a technology marketplace and not a carrier.
+          </label>
+        </div>
         <button class="btn-primary" onclick="register()">Create Account →</button>
       </div>
     </div>
@@ -410,6 +416,7 @@ async function register(){
   document.getElementById('reg-error').textContent='';
   if(!name||!email||!password){document.getElementById('reg-error').textContent='Name, email, and password required';return;}
   if(password.length<8){document.getElementById('reg-error').textContent='Password must be at least 8 characters';return;}
+  if(!document.getElementById('reg-terms').checked){document.getElementById('reg-error').textContent='Please agree to the Terms of Service to continue';return;}
   try{const r=await api('POST','/api/auth/register',{name,email,phone,password,vehicle_type});currentUser=r;enterApp(r.name);}
   catch(e){document.getElementById('reg-error').textContent=e.message;}
 }
