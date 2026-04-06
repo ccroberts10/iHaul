@@ -6,16 +6,18 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust Railway + Cloudflare proxies — critical for sessions
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Serve static files but NOT index.html automatically
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'detour-dev-secret-change-in-prod',
-  resave: false,
+  resave: true,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     secure: false,
     httpOnly: true,
