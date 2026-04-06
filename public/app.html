@@ -127,6 +127,10 @@ textarea{resize:none}
 .driver-route-card:hover{border-color:rgba(61,204,120,0.4)}
 .tags-row{display:flex;flex-wrap:wrap;gap:5px}
 .size-tag{font-size:10px;padding:3px 8px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.08);border-radius:20px;color:rgba(255,255,255,0.45)}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap}
+.filter-group{flex:1;min-width:80px}
+.filter-group label{display:block;font-size:10px;font-weight:500;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px}
+.filter-group select{width:100%;background:var(--dark2);border:0.5px solid rgba(255,255,255,0.1);border-radius:var(--rs);color:var(--white);font-size:12px;font-family:'DM Sans',sans-serif;padding:8px 10px;outline:none;-webkit-appearance:none;appearance:none}
 .job-detail-card{background:var(--dark);border:0.5px solid rgba(255,255,255,0.07);border-radius:var(--r);padding:16px;margin-bottom:12px}
 .detail-label{font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
 .detail-val{font-size:15px;color:var(--white);font-weight:500}
@@ -152,6 +156,8 @@ textarea{resize:none}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--dark);border-top:0.5px solid rgba(255,255,255,0.07);display:flex;padding:8px 0 20px;z-index:50}
 .nav-item{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0;opacity:0.35;transition:opacity 0.2s}
 .nav-item.active{opacity:1}
+.filter-btn{padding:6px 14px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);transition:all 0.2s}
+.filter-btn.active{background:rgba(0,194,168,0.12);border-color:var(--teal);color:var(--teal)}
 .nav-icon{font-size:19px}
 .nav-label{font-size:9px;color:var(--white);font-family:'DM Sans',sans-serif;letter-spacing:0.03em}
 .empty-state{text-align:center;color:var(--gray);font-size:14px;padding:36px 20px;line-height:1.6}
@@ -244,6 +250,13 @@ textarea{resize:none}
         </div>
       </div>
       <div class="section-head"><span>Active Jobs</span><button class="btn-ghost" onclick="loadMyJobs()">Refresh</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="filter-btn active" onclick="filterJobs('all',this)">All</button>
+        <button class="filter-btn" onclick="filterJobs('open',this)">Open</button>
+        <button class="filter-btn" onclick="filterJobs('accepted',this)">Matched</button>
+        <button class="filter-btn" onclick="filterJobs('in_transit',this)">In Transit</button>
+        <button class="filter-btn" onclick="filterJobs('completed',this)">Completed</button>
+      </div>
       <div id="my-jobs-list" class="jobs-list"><div class="empty-state">Loading your jobs...</div></div>
     </div>
 
@@ -264,7 +277,7 @@ textarea{resize:none}
         </div>
         <div id="type-hint" class="type-hint">Standard delivery between two locations.</div>
       </div>
-      <form id="post-form" onsubmit="postJob(event)">
+      <form id="post-form">
         <input type="hidden" id="job-type" value="standard">
         <div id="marketplace-fields" class="form-section" style="display:none">
           <div class="form-section-title">Seller & Buyer Details</div>
@@ -308,9 +321,15 @@ textarea{resize:none}
         <div class="form-section">
           <div class="form-section-title">Route</div>
           <div class="field-group"><label>Pickup Address <span class="req">*</span></label><input type="text" id="job-pickup-addr" required placeholder="225 E 8th Ave"></div>
-          <div class="field-group"><label>Pickup City <span class="req">*</span></label><input type="text" id="job-pickup-city" required placeholder="Durango, CO"></div>
+          <div class="field-row">
+            <div class="field-group"><label>Pickup City <span class="req">*</span></label><input type="text" id="job-pickup-city" required placeholder="Durango"></div>
+            <div class="field-group"><label>Pickup State <span class="req">*</span></label><input type="text" id="job-pickup-state" required placeholder="CO" maxlength="2" style="text-transform:uppercase;"></div>
+          </div>
           <div class="field-group"><label>Dropoff Address <span class="req">*</span></label><input type="text" id="job-dropoff-addr" required placeholder="123 Main St"></div>
-          <div class="field-group"><label>Dropoff City <span class="req">*</span></label><input type="text" id="job-dropoff-city" required placeholder="Telluride, CO"></div>
+          <div class="field-row">
+            <div class="field-group"><label>Dropoff City <span class="req">*</span></label><input type="text" id="job-dropoff-city" required placeholder="Telluride"></div>
+            <div class="field-group"><label>Dropoff State <span class="req">*</span></label><input type="text" id="job-dropoff-state" required placeholder="CO" maxlength="2" style="text-transform:uppercase;"></div>
+          </div>
         </div>
         <div class="form-section">
           <div class="form-section-title">Your Offer to Driver</div>
@@ -327,8 +346,8 @@ textarea{resize:none}
           </div>
           <div class="field-group" style="margin-top:10px;"><label>Notes for driver</label><textarea id="job-notes" rows="2" placeholder="Meet at back entrance, call on arrival..."></textarea></div>
         </div>
-        <div id="post-error" class="error-msg"></div>
-        <button type="submit" class="btn-primary btn-large">Post Delivery Job →</button>
+        <div id="post-error" class="error-msg" style="font-size:14px;padding:10px 0;"></div>
+        <button type="button" onclick="postJob()" class="btn-primary btn-large">Post Delivery Job →</button>
       </form>
     </div>
 
@@ -373,14 +392,62 @@ textarea{resize:none}
         <div id="my-routes-list" class="jobs-list"><div class="empty-state">No active routes posted</div></div>
       </div>
       <div id="drive-browse-panel" style="display:none">
-        <div class="route-filter">
-          <div class="field-group" style="margin:0;flex:1"><input type="text" id="browse-destination" placeholder="Your destination city..."></div>
-          <button class="btn-primary btn-sm" onclick="browseAll()">Search</button>
+
+        <!-- BROWSE TABS -->
+        <div class="drive-mode-switch" style="margin-bottom:14px;">
+          <button class="drive-mode-btn active" id="btab-all" onclick="setBrowseTab('all',this)">🌎 All Jobs</button>
+          <button class="drive-mode-btn" id="btab-near" onclick="setBrowseTab('near',this)">📍 Near Me</button>
+          <button class="drive-mode-btn" id="btab-loc" onclick="setBrowseTab('loc',this)">🔍 By Location</button>
         </div>
+
+        <!-- LOCATION SEARCH (hidden by default) -->
+        <div id="browse-loc-row" style="display:none;margin-bottom:12px;">
+          <div class="route-filter">
+            <div class="field-group" style="margin:0;flex:1"><input type="text" id="browse-destination" placeholder="City or state (e.g. Telluride, CO)"></div>
+            <button class="btn-primary btn-sm" onclick="browseAll()">Search</button>
+          </div>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="form-section" style="padding:12px 14px;margin-bottom:12px;">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label>Job Type</label>
+              <select id="filter-type" onchange="browseAll()">
+                <option value="">All types</option>
+                <option value="standard">📦 General</option>
+                <option value="marketplace">🛋️ Marketplace</option>
+                <option value="retail">🚴 Retail</option>
+                <option value="errand">🛍️ Errand</option>
+                <option value="business">🏢 Business</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Item Size</label>
+              <select id="filter-size" onchange="browseAll()">
+                <option value="">All sizes</option>
+                <option value="envelope">Envelope</option>
+                <option value="small_box">Small Box</option>
+                <option value="medium_box">Medium Box</option>
+                <option value="large_box">Large Box</option>
+                <option value="oversized">Oversized</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Sort by Price</label>
+              <select id="filter-sort" onchange="browseAll()">
+                <option value="">Default</option>
+                <option value="high">High → Low</option>
+                <option value="low">Low → High</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div class="section-head"><span>Available Drivers</span></div>
-        <div id="available-drivers" class="jobs-list"><div class="empty-state">Enter destination to see available drivers</div></div>
+        <div id="available-drivers" class="jobs-list"><div class="empty-state">Search or browse to see available drivers</div></div>
         <div class="section-head" style="margin-top:18px;"><span>Open Deliveries</span></div>
-        <div id="browse-results" class="jobs-list"><div class="empty-state">Enter destination to see open jobs</div></div>
+        <div id="browse-results" class="jobs-list"><div class="empty-state">Search or browse to see open jobs</div></div>
       </div>
     </div>
 
@@ -495,12 +562,46 @@ function routeCard(r){
   return`<div class="job-card"><div class="job-card-header"><div class="job-card-title">${escHtml(r.origin_city)} → ${escHtml(r.destination_city)}</div><button class="btn-ghost" style="color:var(--red);font-size:12px;" onclick="cancelRoute('${r.id}')">Cancel</button></div><div class="job-meta" style="margin-bottom:6px;"><span>🕐 ${dep}</span><span>↗ max ${r.max_detour_minutes} min detour</span></div>${r.vehicle_description?`<div class="job-meta"><span>🚗 ${escHtml(r.vehicle_description)}</span></div>`:''}<div class="tags-row" style="margin-top:7px;">${hauls.map(h=>`<span class="size-tag">${SZ[h]||h}</span>`).join('')}</div></div>`;
 }
 async function cancelRoute(id){try{await api('DELETE',`/api/jobs/driver-routes/${id}`);toast('Route cancelled');loadMyRoutes();}catch(e){toast('Could not cancel route');}}
+let currentBrowseTab='all';
+
+function setBrowseTab(tab,btn){
+  currentBrowseTab=tab;
+  document.querySelectorAll('#drive-browse-panel .drive-mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('browse-loc-row').style.display=tab==='loc'?'flex':'none';
+  if(tab==='near'){getNearMe();}
+  else if(tab==='all'){document.getElementById('browse-destination').value='';browseAll();}
+}
+
+function getNearMe(){
+  const results=document.getElementById('browse-results');
+  const drivers=document.getElementById('available-drivers');
+  results.innerHTML='<div class="empty-state">Getting your location...</div>';
+  drivers.innerHTML='<div class="empty-state">Getting your location...</div>';
+  if(!navigator.geolocation){results.innerHTML='<div class="empty-state">Location not supported on this device</div>';return;}
+  navigator.geolocation.getCurrentPosition(async(pos)=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+      const data=await r.json();
+      const city=data.address.city||data.address.town||data.address.village||'';
+      const state=data.address.state_code||'';
+      document.getElementById('browse-destination').value=`${city}, ${state}`;
+      browseAll();
+    }catch(e){results.innerHTML='<div class="empty-state">Could not determine your city. Try searching by location.</div>';}
+  },()=>{results.innerHTML='<div class="empty-state">Location access denied. Try searching by location instead.</div>';});
+}
+
 async function browseAll(){await Promise.all([browseDrivers(),browseJobs()]);}
+
 async function browseDrivers(){
   const dest=document.getElementById('browse-destination').value.trim(),container=document.getElementById('available-drivers');
   container.innerHTML='<div class="empty-state">Searching...</div>';
-  try{const url=dest?`/api/jobs/driver-routes?destination=${encodeURIComponent(dest)}`:'/api/jobs/driver-routes';const routes=await api('GET',url);if(!routes.length){container.innerHTML=`<div class="empty-state">No drivers heading ${dest?'to '+dest:'anywhere'} right now.</div>`;return;}container.innerHTML=routes.map(r=>driverCard(r)).join('');}
-  catch(e){container.innerHTML='<div class="empty-state">Could not load drivers</div>';}
+  try{
+    const url=dest?`/api/jobs/driver-routes?destination=${encodeURIComponent(dest)}`:'/api/jobs/driver-routes';
+    const routes=await api('GET',url);
+    if(!routes.length){container.innerHTML=`<div class="empty-state">No drivers available${dest?' near '+dest:''}.</div>`;return;}
+    container.innerHTML=routes.map(r=>driverCard(r)).join('');
+  }catch(e){container.innerHTML='<div class="empty-state">Could not load drivers</div>';}
 }
 function driverCard(r){
   const dep=new Date(r.departure_time).toLocaleString([],{weekday:'short',hour:'2-digit',minute:'2-digit'});
@@ -510,17 +611,57 @@ function driverCard(r){
 }
 function requestDriver(routeId,driverName,destCity){showView('view-post');document.getElementById('job-dropoff-city').value=destCity;document.getElementById('job-notes').value=`Requested for driver: ${driverName}`;window._requestedDriverRouteId=routeId;toast(`Posting a job for ${driverName}'s drive to ${destCity}`);}
 async function browseJobs(){
-  const dest=document.getElementById('browse-destination').value.trim(),results=document.getElementById('browse-results');
+  const dest=document.getElementById('browse-destination').value.trim();
+  const jobType=document.getElementById('filter-type').value;
+  const itemSize=document.getElementById('filter-size').value;
+  const sortPrice=document.getElementById('filter-sort').value;
+  const results=document.getElementById('browse-results');
   results.innerHTML='<div class="empty-state">Searching...</div>';
-  try{const url=dest?`/api/jobs?destination=${encodeURIComponent(dest)}`:'/api/jobs';const jobs=await api('GET',url);if(!jobs.length){results.innerHTML=`<div class="empty-state">No open deliveries${dest?' to '+dest:''}.</div>`;return;}results.innerHTML=jobs.map(j=>jobCard(j,true)).join('');}
-  catch(e){results.innerHTML='<div class="empty-state">Search failed</div>';}
+  try{
+    let url='/api/jobs?';
+    if(dest)url+=`destination=${encodeURIComponent(dest)}&`;
+    if(jobType)url+=`job_type=${encodeURIComponent(jobType)}&`;
+    if(itemSize)url+=`item_size=${encodeURIComponent(itemSize)}&`;
+    let jobs=await api('GET',url);
+    if(sortPrice==='high')jobs.sort((a,b)=>b.offered_price-a.offered_price);
+    if(sortPrice==='low')jobs.sort((a,b)=>a.offered_price-b.offered_price);
+    if(!jobs.length){results.innerHTML=`<div class="empty-state">No open deliveries found. Try adjusting your filters.</div>`;return;}
+    results.innerHTML=jobs.map(j=>jobCard(j,true)).join('');
+  }catch(e){results.innerHTML='<div class="empty-state">Search failed</div>';}
+}
+let currentFilter='all';
+function filterJobs(filter,btn){
+  currentFilter=filter;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadMyJobs();
 }
 async function loadMyJobs(){
-  const list=document.getElementById('my-jobs-list');list.innerHTML='<div class="empty-state">Loading...</div>';
-  try{const data=await api('GET','/api/jobs/my/all');const all=[...(data.as_shipper||[]),...(data.as_driver||[])];const active=all.filter(j=>j.status!=='completed');if(!active.length){list.innerHTML='<div class="empty-state">No active jobs yet.<br>Post a delivery or find a drive!</div>';return;}list.innerHTML=active.map(j=>jobCard(j)).join('');}
-  catch(e){list.innerHTML='<div class="empty-state">Could not load jobs</div>';}
+  const list=document.getElementById('my-jobs-list');
+  list.innerHTML='<div class="empty-state">Loading...</div>';
+  try{
+    const data=await api('GET','/api/jobs/my/all');
+    const all=[...(data.as_shipper||[]),...(data.as_driver||[])];
+    // Remove duplicates (same job as both shipper and driver edge case)
+    const seen=new Set();
+    const unique=all.filter(j=>{if(seen.has(j.id))return false;seen.add(j.id);return true;});
+    // Apply filter
+    const filtered=currentFilter==='all'?unique:unique.filter(j=>j.status===currentFilter);
+    if(!filtered.length){
+      const msg=currentFilter==='all'?'No active jobs yet.\nPost a delivery or find a drive!':'No '+currentFilter.replace('_',' ')+' jobs.';
+      list.innerHTML=`<div class="empty-state">${msg}</div>`;return;
+    }
+    // Sort — most recent first, active before completed
+    filtered.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    list.innerHTML=filtered.map(j=>jobCard(j)).join('');
+  }catch(e){list.innerHTML='<div class="empty-state">Could not load jobs</div>';}
 }
 function jobCard(job,isDriver=false){
+  const payout=((job.offered_price||0)*0.75).toFixed(2);
+  const pickupLoc=job.pickup_state?`${escHtml(job.pickup_city)}, ${escHtml(job.pickup_state)}`:escHtml(job.pickup_city);
+  const dropoffLoc=job.dropoff_state?`${escHtml(job.dropoff_city)}, ${escHtml(job.dropoff_state)}`:escHtml(job.dropoff_city);
+  return`<div class="job-card" onclick="openJob('${job.id}','${isDriver?'driver':'shipper'}')"><div class="job-card-header"><div class="job-card-title">${escHtml(job.title)}</div><div class="job-price">$${parseFloat(job.offered_price).toFixed(2)}</div></div><div class="job-route"><div class="route-dot start"></div><div class="route-city">${pickupLoc}</div><div class="route-line"></div><div class="route-city">${dropoffLoc}</div><div class="route-dot end"></div></div><div class="job-meta"><span class="status-badge status-${job.status}">${ST[job.status]||job.status}</span><span>${TL[job.job_type]||'📦 General'}</span><span>${SZ[job.item_size]||job.item_size}</span>${job.fragile?'<span>⚠️ Fragile</span>':''}${isDriver?`<span style="color:var(--green);font-weight:600;">Earn $${payout}</span>`:''}</div></div>`;
+}
   const payout=job.driver_payout?parseFloat(job.driver_payout).toFixed(2):(parseFloat(job.offered_price)*0.75).toFixed(2);
   return`<div class="job-card" onclick="openJob('${job.id}','${isDriver?'driver':'shipper'}')"><div class="job-card-header"><div class="job-card-title">${escHtml(job.title)}</div><div class="job-price">$${parseFloat(job.offered_price).toFixed(2)}</div></div><div class="job-route"><div class="route-dot start"></div><div class="route-city">${escHtml(job.pickup_city)}</div><div class="route-line"></div><div class="route-city">${escHtml(job.dropoff_city)}</div><div class="route-dot end"></div></div><div class="job-meta"><span class="status-badge status-${job.status}">${ST[job.status]||job.status}</span><span>${TL[job.job_type]||'📦 General'}</span><span>${SZ[job.item_size]||job.item_size}</span>${job.fragile?'<span>⚠️ Fragile</span>':''}${isDriver?`<span style="color:var(--green);font-weight:600;">Earn $${payout}</span>`:''}</div></div>`;
 }
@@ -557,23 +698,52 @@ function renderJobDetail(job,messages){
   if(job.status==='completed'&&(isShipper||isDriver))h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:7px;">Rate your experience</div><div class="star-row" id="star-row">${[1,2,3,4,5].map(i=>`<span class="star" onclick="setRating(${i})">★</span>`).join('')}</div><input type="text" id="rating-comment" placeholder="Any feedback? (optional)" style="margin-top:7px;"><button class="btn-secondary" style="margin-top:7px;" onclick="submitRating('${job.id}')">Submit Rating</button></div>`;
   return h;
 }
-async function postJob(e){
-  e.preventDefault();document.getElementById('post-error').textContent='';
+async function postJob(){
+  const errEl=document.getElementById('post-error');
+  errEl.textContent='';
   const jobType=document.getElementById('job-type').value;
+  const title=document.getElementById('job-title').value.trim();
+  const item_size=document.getElementById('job-size').value;
+  const pickup_address=document.getElementById('job-pickup-addr').value.trim();
+  const pickup_city=document.getElementById('job-pickup-city').value.trim();
+  const pickup_state=document.getElementById('job-pickup-state').value.trim().toUpperCase();
+  const dropoff_address=document.getElementById('job-dropoff-addr').value.trim();
+  const dropoff_city=document.getElementById('job-dropoff-city').value.trim();
+  const dropoff_state=document.getElementById('job-dropoff-state').value.trim().toUpperCase();
+  const offered_price=document.getElementById('job-price').value;
+
+  if(!title){errEl.textContent='Please add a title for your delivery.';return;}
+  if(!item_size){errEl.textContent='Please select an item size.';return;}
+  if(!pickup_address){errEl.textContent='Please enter a pickup address.';return;}
+  if(!pickup_city){errEl.textContent='Please enter a pickup city.';return;}
+  if(!pickup_state){errEl.textContent='Please enter a pickup state (e.g. CO).';return;}
+  if(!dropoff_address){errEl.textContent='Please enter a dropoff address.';return;}
+  if(!dropoff_city){errEl.textContent='Please enter a dropoff city.';return;}
+  if(!dropoff_state){errEl.textContent='Please enter a dropoff state (e.g. CO).';return;}
+  if(!offered_price||parseFloat(offered_price)<5){errEl.textContent='Minimum offer is $5.';return;}
+
   const listingInput=document.getElementById('listing-photos-input');
+  if(jobType==='marketplace'&&(!listingInput?.files?.length)){errEl.textContent='Marketplace jobs require at least one item photo.';return;}
+
   const fd=new FormData();
   if(jobType==='marketplace'&&listingInput?.files?.length)Array.from(listingInput.files).forEach(f=>fd.append('listing_photos',f));
-  const fields={job_type:jobType,title:document.getElementById('job-title').value.trim(),description:document.getElementById('job-desc').value.trim(),item_size:document.getElementById('job-size').value,item_weight:document.getElementById('job-weight').value,fragile:document.getElementById('job-fragile').checked?'1':'',needs_disassembly:document.getElementById('job-disassembly').checked?'1':'',pickup_address:document.getElementById('job-pickup-addr').value.trim(),pickup_city:document.getElementById('job-pickup-city').value.trim(),dropoff_address:document.getElementById('job-dropoff-addr').value.trim(),dropoff_city:document.getElementById('job-dropoff-city').value.trim(),offered_price:document.getElementById('job-price').value,notes:document.getElementById('job-notes').value.trim(),seller_name:document.getElementById('seller-name')?.value.trim()||'',seller_phone:document.getElementById('seller-phone')?.value.trim()||'',buyer_name:document.getElementById('buyer-name')?.value.trim()||'',buyer_phone:document.getElementById('buyer-phone')?.value.trim()||'',store_name:document.getElementById('store-name')?.value.trim()||'',item_to_pickup:document.getElementById('item-to-pickup')?.value.trim()||''};
+  const fields={job_type:jobType,title,description:document.getElementById('job-desc').value.trim(),item_size,item_weight:document.getElementById('job-weight').value,fragile:document.getElementById('job-fragile').checked?'1':'',needs_disassembly:document.getElementById('job-disassembly').checked?'1':'',pickup_address,pickup_city,pickup_state,dropoff_address,dropoff_city,dropoff_state,offered_price,notes:document.getElementById('job-notes').value.trim(),seller_name:document.getElementById('seller-name')?.value.trim()||'',seller_phone:document.getElementById('seller-phone')?.value.trim()||'',buyer_name:document.getElementById('buyer-name')?.value.trim()||'',buyer_phone:document.getElementById('buyer-phone')?.value.trim()||'',store_name:document.getElementById('store-name')?.value.trim()||'',item_to_pickup:document.getElementById('item-to-pickup')?.value.trim()||''};
   if(window._requestedDriverRouteId){fields.requested_driver_route_id=window._requestedDriverRouteId;window._requestedDriverRouteId=null;}
   Object.entries(fields).forEach(([k,v])=>{if(v)fd.append(k,v);});
   try{
     const res=await fetch('/api/jobs',{method:'POST',body:fd,credentials:'include'});
-    const data=await res.json();if(!res.ok)throw new Error(data.error||'Failed');
-    toast('Delivery posted! Looking for a driver match.');
-    document.getElementById('post-form').reset();document.getElementById('price-breakdown').style.display='none';document.getElementById('marketplace-fields').style.display='none';document.getElementById('errand-fields').style.display='none';
-    document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('active'));document.querySelector('[data-type="standard"]').classList.add('active');document.getElementById('job-type').value='standard';
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Failed to post job');
+    toast('Delivery posted! Looking for a driver match. 🎉');
+    document.getElementById('post-form').reset();
+    document.getElementById('price-breakdown').style.display='none';
+    document.getElementById('marketplace-fields').style.display='none';
+    document.getElementById('errand-fields').style.display='none';
+    document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('active'));
+    document.querySelector('[data-type="standard"]').classList.add('active');
+    document.getElementById('job-type').value='standard';
     showView('view-home');
-  }catch(e){document.getElementById('post-error').textContent=e.message;}
+  }catch(e){errEl.textContent=e.message;}
 }
 async function acceptJob(jobId){try{await api('POST',`/api/jobs/${jobId}/accept`);toast('Job accepted! Check messages to coordinate pickup.');await loadJobDetail();}catch(e){toast(e.message||'Could not accept job');}}
 async function sendMsg(jobId){
