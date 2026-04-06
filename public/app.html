@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Detour</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#00C2A8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Detour">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--teal:#00C2A8;--teal2:#00DDB8;--black:#080808;--dark:#111111;--dark2:#1C1C1C;--dark3:#242424;--white:#FFFFFF;--gray:#777777;--gray2:#444444;--green:#3DCC78;--red:#F05555;--r:14px;--rs:8px}
@@ -393,6 +404,16 @@ textarea{resize:none}
 
 <div id="toast" class="toast"></div>
 <script src="https://js.stripe.com/v3/"></script>
+<script>
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('Detour SW registered'))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
 <script>
 let currentUser=null,currentJobId=null,currentJobPerspective='shipper',jobPollInterval=null;
 const SZ={envelope:'Envelope / Doc',small_box:'Small Box',medium_box:'Medium Box',large_box:'Large Box',oversized:'Oversized / Furniture'};
