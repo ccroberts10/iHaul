@@ -258,7 +258,10 @@ textarea{resize:none}
           <div class="action-sub">Post route or find deliveries</div>
         </div>
       </div>
-      <div class="section-head"><span>Active Jobs</span><button class="btn-ghost" onclick="loadMyJobs()">Refresh</button></div>
+      <div class="section-head" style="margin-top:20px;"><span>Open Deliveries Near You</span><button class="btn-ghost" onclick="loadOpenJobs()">Refresh</button></div>
+      <div id="open-jobs-list" class="jobs-list"><div class="empty-state">Loading open deliveries...</div></div>
+
+      <div class="section-head" style="margin-top:20px;"><span>My Active Jobs</span><button class="btn-ghost" onclick="loadMyJobs()">Refresh</button></div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <button class="filter-btn active" onclick="filterJobs('all',this)">All</button>
         <button class="filter-btn" onclick="filterJobs('open',this)">Open</button>
@@ -600,11 +603,12 @@ function enterApp(name){
   const local=new Date(soon.getTime()-soon.getTimezoneOffset()*60000).toISOString().slice(0,16);
   const d=document.getElementById('route-depart');if(d)d.value=local;
   loadMyJobs();
+  loadOpenJobs();
 }
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if(id==='view-home')loadMyJobs();
+  if(id==='view-home'){loadMyJobs();loadOpenJobs();}
   if(id==='view-post')setTimeout(initStripeElements,100);
   if(id==='view-drive')checkAndShowConnectPrompt();
 }
@@ -720,7 +724,15 @@ function filterJobs(filter,btn){
   btn.classList.add('active');
   loadMyJobs();
 }
-async function loadMyJobs(){
+async function loadOpenJobs(){
+  const list=document.getElementById('open-jobs-list');
+  if(!list)return;
+  try{
+    const jobs=await api('GET','/api/jobs');
+    if(!jobs.length){list.innerHTML='<div class="empty-state">No open deliveries right now.\nPost one or check back soon!</div>';return;}
+    list.innerHTML=jobs.map(j=>jobCard(j,true)).join('');
+  }catch(e){list.innerHTML='<div class="empty-state">Could not load deliveries</div>';}
+}
   const list=document.getElementById('my-jobs-list');
   list.innerHTML='<div class="empty-state">Loading...</div>';
   try{
