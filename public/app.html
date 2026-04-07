@@ -727,6 +727,7 @@ function renderJobDetail(job,messages){
   if(job.job_type==='errand'&&(extra.store_name||extra.item_to_pickup))h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Errand Details</div>${extra.store_name?`<div><div class="detail-label">Store</div><div class="detail-val">${escHtml(extra.store_name)}</div></div>`:''}${extra.item_to_pickup?`<div style="margin-top:8px;"><div class="detail-label">Item to pick up</div><div class="detail-val" style="font-size:13px;">${escHtml(extra.item_to_pickup)}</div></div>`:''}</div>`;
   h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Route</div><div class="job-route" style="margin-bottom:10px;"><div class="route-dot start"></div><div class="route-city">${escHtml(job.pickup_city)}</div><div class="route-line"></div><div class="route-city">${escHtml(job.dropoff_city)}</div><div class="route-dot end"></div></div><div class="detail-grid"><div><div class="detail-label">Pickup</div><div class="detail-val" style="font-size:13px;">${escHtml(job.pickup_address)}</div></div><div><div class="detail-label">Dropoff</div><div class="detail-val" style="font-size:13px;">${escHtml(job.dropoff_address)}</div></div></div>${job.notes?`<div style="margin-top:8px;"><div class="detail-label">Notes</div><div class="detail-val" style="font-size:13px;">${escHtml(job.notes)}</div></div>`:''} ${(isDriver||currentJobPerspective==='driver')?mapsButtons(job):''}</div>`;
   if(job.status==='open'&&currentJobPerspective==='driver'&&!isShipper)h+=`<button class="btn-primary btn-large" onclick="acceptJob('${job.id}')">Accept — Earn $${dp} →</button>`;
+  if(job.status==='open'&&isShipper)h+=`<button class="btn-secondary btn-large" style="background:rgba(240,85,85,0.1);border-color:rgba(240,85,85,0.3);color:var(--red);margin-top:8px;" onclick="deleteJob('${job.id}')">🗑 Delete This Listing</button>`;
   if(job.status!=='open'&&(isShipper||isDriver)){
     h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Messages with ${isShipper?(job.driver_name||'Driver'):(job.shipper_name||'Shipper')}</div><div class="messages-thread" id="msg-thread">${messages.length?messages.map(m=>`<div><div class="msg-name">${escHtml(m.sender_name)}</div><div class="msg-bubble ${m.sender_id===currentUser?.userId?'msg-out':'msg-in'}">${escHtml(m.content)}</div></div>`).join(''):'<div style="color:var(--gray);font-size:13px;text-align:center;padding:10px;">No messages yet</div>'}</div><div class="msg-input-row"><input type="text" id="msg-input" placeholder="Send a message..." onkeydown="if(event.key==='Enter')sendMsg('${job.id}')"><button class="msg-send-btn" onclick="sendMsg('${job.id}')">↑</button></div></div>`;
     setTimeout(()=>{const t=document.getElementById('msg-thread');if(t)t.scrollTop=t.scrollHeight;},100);
@@ -795,6 +796,15 @@ async function postJob(){
   }catch(e){errEl.textContent=e.message;}
 }
 async function acceptJob(jobId){try{await api('POST',`/api/jobs/${jobId}/accept`);toast('Job accepted! Check messages to coordinate pickup.');await loadJobDetail();}catch(e){toast(e.message||'Could not accept job');}}
+
+async function deleteJob(jobId){
+  if(!confirm('Delete this listing? This cannot be undone. Any payment authorization will be cancelled.'))return;
+  try{
+    await api('DELETE',`/api/jobs/${jobId}`);
+    toast('Listing deleted.');
+    showView('view-home');
+  }catch(e){toast(e.message||'Could not delete listing');}
+}
 async function sendMsg(jobId){
   const input=document.getElementById('msg-input'),content=input.value.trim();if(!content)return;input.value='';
   try{const msg=await api('POST',`/api/jobs/${jobId}/messages`,{content});const thread=document.getElementById('msg-thread');if(thread){const div=document.createElement('div');div.innerHTML=`<div class="msg-name">${escHtml(msg.sender_name)}</div><div class="msg-bubble msg-out">${escHtml(msg.content)}</div>`;thread.appendChild(div);thread.scrollTop=thread.scrollHeight;}}
