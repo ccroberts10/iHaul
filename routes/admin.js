@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../db/schema');
 const { notifyDriverApproved, notifyDriverRejected } = require('../utils/email');
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'detour-admin-2025';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Loicjack10!';
 
 function requireAdmin(req, res, next) {
   const auth = req.headers['x-admin-password'] || req.query.pw;
