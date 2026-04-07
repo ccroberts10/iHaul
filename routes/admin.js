@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/schema');
+const { notifyDriverApproved, notifyDriverRejected } = require('../utils/email');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'detour-admin-2025';
 
@@ -22,21 +23,28 @@ router.get('/drivers', requireAdmin, (req, res) => {
 });
 
 // Approve a driver
-router.post('/drivers/:id/approve', requireAdmin, (req, res) => {
+router.post('/drivers/:id/approve', requireAdmin, async (req, res) => {
   db.prepare('UPDATE users SET driver_approved = 1, insurance_verified = 1 WHERE id = ?').run(req.params.id);
   const user = db.prepare('SELECT name, email FROM users WHERE id = ?').get(req.params.id);
-  // TODO: Send approval email to driver
+  if (user) {
+    notifyDriverApproved({ driverName: user.name, driverEmail: user.email })
+      .catch(e => console.error('Email error:', e.message));
+  }
   console.log(`Driver approved: ${user?.name} (${user?.email})`);
   res.json({ success: true });
 });
 
 // Reject a driver
-router.post('/drivers/:id/reject', requireAdmin, (req, res) => {
+router.post('/drivers/:id/reject', requireAdmin, async (req, res) => {
   const { reason } = req.body;
-  db.prepare('UPDATE users SET driver_approved = 0, insurance_verified = 0, insurance_photo = NULL WHERE id = ?').run(req.params.id);
+  const rejectionReason = reason || 'Documents were unclear or could not be verified. Please resubmit clear, readable photos.';
+  db.prepare('UPDATE users SET driver_approved = 0, insurance_verified = 0, insurance_photo = NULL, license_photo = NULL WHERE id = ?').run(req.params.id);
   const user = db.prepare('SELECT name, email FROM users WHERE id = ?').get(req.params.id);
-  console.log(`Driver rejected: ${user?.name} (${user?.email}) — Reason: ${reason}`);
-  // TODO: Send rejection email to driver
+  if (user) {
+    notifyDriverRejected({ driverName: user.name, driverEmail: user.email, reason: rejectionReason })
+      .catch(e => console.error('Email error:', e.message));
+  }
+  console.log(`Driver rejected: ${user?.name} (${user?.email}) — Reason: ${rejectionReason}`);
   res.json({ success: true });
 });
 
