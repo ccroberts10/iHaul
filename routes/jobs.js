@@ -149,7 +149,7 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
 router.get('/', (req, res) => {
   const { destination, job_type, item_size } = req.query;
   let query = `SELECT j.*, u.name as shipper_name, u.rating_total, u.rating_count
-    FROM jobs j JOIN users u ON j.shipper_id = u.id WHERE j.status = "open"`;
+    FROM jobs j JOIN users u ON j.shipper_id = u.id WHERE j.status = 'open'`;
   const params = [];
   if (job_type && VALID_JOB_TYPES.includes(job_type)) { query += ' AND j.job_type = ?'; params.push(job_type); }
   if (item_size) { query += ' AND j.item_size = ?'; params.push(item_size); }
