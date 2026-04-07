@@ -116,10 +116,15 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   let paymentIntentId = null;
   if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_placeholder') {
     try {
-      const pi = await stripe.paymentIntents.create({
+      const piParams = {
         amount: Math.round(price * 100), currency: 'usd', capture_method: 'manual',
         metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
-      });
+      };
+      if (req.body.payment_method_id) {
+        piParams.payment_method = req.body.payment_method_id;
+        piParams.confirm = false; // shipper confirms when driver accepts
+      }
+      const pi = await stripe.paymentIntents.create(piParams);
       paymentIntentId = pi.id;
     } catch (e) { console.error('Stripe error:', e.message); }
   }
@@ -206,8 +211,17 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
   if (job.status !== 'open') return res.status(400).json({ error: 'Job no longer available' });
   if (job.shipper_id === req.session.userId) return res.status(400).json({ error: 'Cannot accept your own job' });
   db.prepare('UPDATE jobs SET driver_id = ?, status = "accepted" WHERE id = ?').run(req.session.userId, job.id);
-  if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY !== 'sk_test_placeholder') {
-    try { await stripe.paymentIntents.capture(job.stripe_payment_intent_id); } catch (e) { console.error(e.message); }
+  if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
+      // Confirm first if not already confirmed, then capture
+      if (pi.status === 'requires_confirmation') {
+        await stripe.paymentIntents.confirm(job.stripe_payment_intent_id);
+      }
+      if (pi.status === 'requires_capture' || pi.status === 'requires_confirmation') {
+        await stripe.paymentIntents.capture(job.stripe_payment_intent_id);
+      }
+    } catch (e) { console.error('Stripe accept error:', e.message); }
   }
   const extra = JSON.parse(job.extra_data || '{}');
   let firstMsg = "I've accepted your delivery! When and where should we meet for pickup?";
@@ -252,6 +266,22 @@ router.post('/:id/confirm', requireAuth, upload.array('photos', 6), async (req, 
   }
   db.prepare('UPDATE jobs SET dropoff_photos = ?, dropoff_confirmed_at = CURRENT_TIMESTAMP, status = "completed", stripe_transfer_id = ? WHERE id = ?')
     .run(JSON.stringify([...existing, ...photos]), transferId, job.id);
+  res.json({ success: true });
+});
+
+// Delete / cancel a job (shipper only, open jobs only)
+router.delete('/:id', requireAuth, async (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (job.shipper_id !== req.session.userId) return res.status(403).json({ error: 'Only the poster can delete this job' });
+  if (job.status !== 'open') return res.status(400).json({ error: 'Only open jobs can be deleted. Contact support if a driver has already accepted.' });
+  // Cancel Stripe PaymentIntent if exists
+  if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
+    try {
+      await stripe.paymentIntents.cancel(job.stripe_payment_intent_id);
+    } catch (e) { console.error('Stripe cancel error:', e.message); }
+  }
+  db.prepare('DELETE FROM jobs WHERE id = ?').run(job.id);
   res.json({ success: true });
 });
 
