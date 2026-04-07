@@ -215,6 +215,10 @@ textarea{resize:none}
             <option value="cargo_van">Cargo Van</option>
           </select>
         </div>
+        <div class="field-group" id="plate-field" style="display:none">
+          <label>License Plate</label>
+          <input type="text" id="reg-plate" placeholder="ABC-1234" style="text-transform:uppercase;">
+        </div>
         <div id="reg-error" class="error-msg"></div>
         <div style="display:flex;align-items:flex-start;gap:10px;margin:10px 0;background:var(--dark2);border-radius:var(--rs);padding:12px 14px;">
           <input type="checkbox" id="reg-terms" style="margin-top:3px;width:16px;height:16px;accent-color:var(--teal);flex-shrink:0;cursor:pointer;">
@@ -368,6 +372,8 @@ textarea{resize:none}
         <button class="back-btn" onclick="showView('view-home')">← Back</button>
         <h2>Drive & Earn</h2>
       </div>
+      <!-- Connect Bank Account — always visible -->
+      <div id="connect-prompt-top" class="job-detail-card" style="margin-bottom:14px;display:none;"></div>
       <div class="drive-mode-switch">
         <button class="drive-mode-btn active" id="dmb-post" onclick="switchDriveMode('post')">📍 Post My Route</button>
         <button class="drive-mode-btn" id="dmb-browse" onclick="switchDriveMode('browse')">🔍 Browse Jobs</button>
@@ -548,6 +554,15 @@ function showTab(t){
   document.getElementById('register-form').style.display=t==='register'?'block':'none';
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===(t==='login'?0:1)));
 }
+
+// Show license plate field when vehicle is selected
+document.addEventListener('DOMContentLoaded',()=>{
+  const veh=document.getElementById('reg-vehicle');
+  if(veh)veh.addEventListener('change',()=>{
+    const pf=document.getElementById('plate-field');
+    if(pf)pf.style.display=veh.value?'block':'none';
+  });
+});
 async function login(){
   const email=document.getElementById('login-email').value.trim();
   const password=document.getElementById('login-password').value;
@@ -563,12 +578,12 @@ async function login(){
   }catch(e){document.getElementById('login-error').textContent=e.message;}
 }
 async function register(){
-  const name=document.getElementById('reg-name').value.trim(),email=document.getElementById('reg-email').value.trim(),phone=document.getElementById('reg-phone').value.trim(),password=document.getElementById('reg-password').value,vehicle_type=document.getElementById('reg-vehicle').value;
+  const name=document.getElementById('reg-name').value.trim(),email=document.getElementById('reg-email').value.trim(),phone=document.getElementById('reg-phone').value.trim(),password=document.getElementById('reg-password').value,vehicle_type=document.getElementById('reg-vehicle').value,license_plate=document.getElementById('reg-plate')?.value.trim().toUpperCase()||'';
   document.getElementById('reg-error').textContent='';
   if(!name||!email||!password){document.getElementById('reg-error').textContent='Name, email, and password required';return;}
   if(password.length<8){document.getElementById('reg-error').textContent='Password must be at least 8 characters';return;}
   if(!document.getElementById('reg-terms').checked){document.getElementById('reg-error').textContent='Please agree to the Terms of Service to continue';return;}
-  try{const r=await api('POST','/api/auth/register',{name,email,phone,password,vehicle_type});currentUser=r;enterApp(r.name);}
+  try{const r=await api('POST','/api/auth/register',{name,email,phone,password,vehicle_type,license_plate});currentUser=r;enterApp(r.name);}
   catch(e){document.getElementById('reg-error').textContent=e.message;}
 }
 async function logout(){
@@ -591,6 +606,7 @@ function showView(id){
   document.getElementById(id).classList.add('active');
   if(id==='view-home')loadMyJobs();
   if(id==='view-post')setTimeout(initStripeElements,100);
+  if(id==='view-drive')checkAndShowConnectPrompt();
 }
 function setNavActive(el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
 function selectJobType(type,el){
@@ -924,17 +940,16 @@ async function startConnectOnboarding(){try{const res=await api('POST','/api/str
 async function openStripeDashboard(){try{const res=await api('POST','/api/stripe/connect/dashboard');if(res.url)window.open(res.url,'_blank');}catch(e){toast('Could not open dashboard');}}
 async function checkAndShowConnectPrompt(){
   let status={connected:false};try{status=await api('GET','/api/stripe/connect/status');}catch(e){return;}
-  const panel=document.getElementById('drive-post-panel');if(!panel)return;
-  const ex=document.getElementById('connect-prompt');if(ex)ex.remove();
-  const p=document.createElement('div');p.id='connect-prompt';p.className='job-detail-card';
+  const topPrompt=document.getElementById('connect-prompt-top');
+  if(!topPrompt)return;
   if(!status.connected||!status.charges_enabled){
-    p.style.cssText='border-color:rgba(0,194,168,0.4);margin-bottom:14px;';
-    p.innerHTML=`<div style="display:flex;gap:12px;align-items:flex-start;"><div style="font-size:22px;">💳</div><div style="flex:1;"><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:4px;">Set up payouts to earn</div><div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:10px;line-height:1.5;">Connect your bank account so Detour can pay you after each delivery. Takes 2 minutes.</div><button class="btn-primary" style="margin:0;" onclick="startConnectOnboarding()">Connect Bank Account →</button></div></div>`;
+    topPrompt.style.display='block';
+    topPrompt.style.cssText='border-color:rgba(0,194,168,0.4);margin-bottom:14px;display:block;';
+    topPrompt.innerHTML=`<div style="display:flex;gap:12px;align-items:flex-start;"><div style="font-size:22px;">💳</div><div style="flex:1;"><div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:4px;">Set up payouts to earn</div><div style="font-size:13px;color:rgba(255,255,255,0.55);margin-bottom:10px;line-height:1.5;">Connect your bank account so Detour can pay you after each delivery. Takes 2 minutes.</div><button class="btn-primary" style="margin:0;" onclick="startConnectOnboarding()">Connect Bank Account →</button></div></div>`;
   }else{
-    p.style.cssText='border-color:rgba(61,204,120,0.3);margin-bottom:14px;';
-    p.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:13px;color:var(--green);font-weight:600;">✓ Payout account connected</div><div style="font-size:12px;color:var(--gray);">Earnings deposited automatically</div></div><button class="btn-ghost" onclick="openStripeDashboard()">View earnings →</button></div>`;
+    topPrompt.style.cssText='border-color:rgba(61,204,120,0.3);margin-bottom:14px;display:block;';
+    topPrompt.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:13px;color:var(--green);font-weight:600;">✓ Payout account connected</div><div style="font-size:12px;color:var(--gray);">Earnings deposited automatically</div></div><button class="btn-ghost" onclick="openStripeDashboard()">View earnings →</button></div>`;
   }
-  panel.insertBefore(p,panel.firstChild);
 }
 (function(){const params=new URLSearchParams(window.location.search);if(params.get('onboard')==='complete'){setTimeout(()=>toast("Payout account connected! You're ready to earn. 🎉"),800);window.history.replaceState({},'','/');}else if(params.get('onboard')==='error'){setTimeout(()=>toast('Something went wrong. Try connecting again.'),800);window.history.replaceState({},'','/');}})();
 async function api(method,url,body){const opts={method,headers:{'Content-Type':'application/json'},credentials:'include'};if(body&&method!=='GET')opts.body=JSON.stringify(body);const res=await fetch(url,opts);const data=await res.json();if(!res.ok)throw new Error(data.error||'Request failed');return data;}
