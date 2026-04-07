@@ -733,6 +733,7 @@ async function loadOpenJobs(){
     list.innerHTML=jobs.map(j=>jobCard(j,true)).join('');
   }catch(e){list.innerHTML='<div class="empty-state">Could not load deliveries</div>';}
 }
+async function loadMyJobs(){
   const list=document.getElementById('my-jobs-list');
   list.innerHTML='<div class="empty-state">Loading...</div>';
   try{
