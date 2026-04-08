@@ -466,7 +466,7 @@ textarea{resize:none}
           <button class="btn-secondary" style="margin-top:4px;" onclick="updateVehicle()">Save Vehicle Info</button>
         </div>
         <div class="form-section" style="margin-top:12px;">
-          <div class="form-section-title">🛡️ Driver Verification</div>
+          <div class="form-section-title">🛡️ Driver Verification <button class="btn-ghost" style="font-size:11px;padding:2px 8px;margin-left:6px;" onclick="refreshVerificationStatus()">↻ Refresh</button></div>
           <div id="verification-status" style="margin-bottom:14px;"></div>
           <div id="insurance-upload-section">
             <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:14px;line-height:1.6;">Upload your driver's license and proof of insurance before accepting jobs. Your account will be reviewed within 24 hours.</div>
@@ -725,7 +725,22 @@ function showView(id){
   document.getElementById(id).classList.add('active');
   if(id==='view-home'){loadMyJobs();loadOpenJobs();}
   if(id==='view-post')setTimeout(initStripeElements,100);
-  if(id==='view-drive')checkAndShowConnectPrompt();
+  if(id==='view-drive'){checkAndShowConnectPrompt();refreshVerificationStatus();}
+}
+
+async function refreshVerificationStatus(){
+  try{
+    const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid');
+    if(!uid)return;
+    const res=await fetch('/api/auth/me',{
+      headers:{'Content-Type':'application/json','x-user-id':uid},
+      credentials:'include'
+    });
+    if(!res.ok)return;
+    const user=await res.json();
+    currentUser=user;
+    updateVerificationStatus(user);
+  }catch(e){console.log('Verification refresh error:',e.message);}
 }
 function setNavActive(el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
 function selectJobType(type,el){
@@ -1203,13 +1218,26 @@ async function updateVehicle(){
   const vehicle_description=document.getElementById('driver-vehicle-desc').value.trim();
   const license_plate=document.getElementById('driver-license-plate').value.trim().toUpperCase();
   if(!vehicle_type){toast('Please select a vehicle type');return;}
+  // Save to localStorage immediately — works even if server call fails
+  localStorage.setItem('detour_vehicle',vehicle_type);
+  localStorage.setItem('detour_vehicle_desc',vehicle_description);
+  localStorage.setItem('detour_plate',license_plate);
   try{
-    await api('POST','/api/auth/update-profile',{vehicle_type,vehicle_description,license_plate});
-    localStorage.setItem('detour_vehicle',vehicle_type);
-    localStorage.setItem('detour_vehicle_desc',vehicle_description);
-    localStorage.setItem('detour_plate',license_plate);
+    const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid');
+    const res=await fetch('/api/auth/update-profile',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-user-id':uid||''},
+      credentials:'include',
+      body:JSON.stringify({vehicle_type,vehicle_description,license_plate})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Server error');
     toast('Vehicle info saved ✓');
-  }catch(e){toast(e.message||'Could not save vehicle info');}
+  }catch(e){
+    // Still show success since localStorage worked
+    toast('Vehicle info saved locally ✓');
+    console.log('Vehicle server save error:',e.message);
+  }
 }
 function updateVerificationStatus(user){
   const el=document.getElementById('verification-status');
