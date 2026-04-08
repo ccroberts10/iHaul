@@ -4,7 +4,7 @@ const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
 
-// Wait for volume to be available
+// Wait for volume
 const VOLUME_PATH = process.env.RAILWAY_VOLUME_MOUNT_PATH;
 if (VOLUME_PATH) {
   let waited = 0;
@@ -12,7 +12,6 @@ if (VOLUME_PATH) {
     const start = Date.now();
     while (Date.now() - start < 500) {}
     waited += 500;
-    console.log(`Waiting for volume at ${VOLUME_PATH}... ${waited}ms`);
   }
   console.log(`Volume ready: ${fs.existsSync(VOLUME_PATH)}`);
 }
@@ -20,14 +19,12 @@ if (VOLUME_PATH) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust Railway + Cloudflare proxies
 app.set('trust proxy', 1);
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'detour-dev-secret-change-in-prod',
+  secret: process.env.SESSION_SECRET || 'detour-secret-2025',
   resave: true,
   saveUninitialized: false,
   rolling: true,
@@ -41,13 +38,24 @@ app.use(session({
   }
 }));
 
-// API routes FIRST
+// Universal auth middleware — checks session, header, or token cookie
+app.use((req, res, next) => {
+  if (!req.session.userId) {
+    const headerUid = req.headers['x-user-id'];
+    const cookieToken = req.cookies?.detour_uid;
+    if (headerUid) req.session.userId = headerUid;
+    else if (cookieToken) req.session.userId = cookieToken;
+  }
+  next();
+});
+
+// API routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/stripe', require('./routes/stripe'));
 app.use('/api/admin', require('./routes/admin'));
 
-// Debug endpoints
+// Debug
 app.get('/api/debug/session', (req, res) => {
   res.json({
     sessionID: req.sessionID,
@@ -64,12 +72,9 @@ app.get('/api/debug/db', (req, res) => {
     const db = require('./db/schema');
     const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
     const jobCount = db.prepare('SELECT COUNT(*) as count FROM jobs').get();
-    const dbPath = VOLUME_PATH
-      ? path.join(VOLUME_PATH, 'detour.db')
-      : './db/detour.db';
     res.json({
       status: 'ok',
-      db_path: dbPath,
+      db_path: VOLUME_PATH ? path.join(VOLUME_PATH, 'detour.db') : './db/detour.db',
       volume_path: VOLUME_PATH || 'not set',
       volume_exists: VOLUME_PATH ? fs.existsSync(VOLUME_PATH) : 'n/a',
       users: userCount.count,
@@ -94,8 +99,6 @@ app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'public', 'ter
 app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/app', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
-
-// Catch-all
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'app.html')));
 
 app.listen(PORT, () => console.log(`Detour running on port ${PORT}`));
