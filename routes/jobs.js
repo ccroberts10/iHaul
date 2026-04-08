@@ -5,6 +5,7 @@ const db = require('../db/schema');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
 const path = require('path');
+const { geocode, notifyMatchedDrivers } = require('../utils/matching');
 
 const fs = require('fs');
 const storage = multer.diskStorage({
@@ -53,6 +54,22 @@ router.post('/driver-routes', requireAuth, (req, res) => {
   );
   const route = db.prepare(`SELECT dr.*, u.name as driver_name, u.rating_total, u.rating_count, u.vehicle_type
     FROM driver_routes dr JOIN users u ON dr.driver_id = u.id WHERE dr.id = ?`).get(id);
+
+  // Geocode origin and destination asynchronously
+  setImmediate(async () => {
+    try {
+      const [originCoords, destCoords] = await Promise.all([
+        geocode(`${origin_city}, CO`),
+        geocode(`${destination_city}, CO`)
+      ]);
+      if (originCoords && destCoords) {
+        db.prepare(`UPDATE driver_routes SET origin_lat=?, origin_lng=?, destination_lat=?, destination_lng=? WHERE id=?`)
+          .run(originCoords.lat, originCoords.lng, destCoords.lat, destCoords.lng, id);
+        console.log(`Geocoded route ${id}: ${origin_city} → ${destination_city}`);
+      }
+    } catch(e) { console.error('Route geocode error:', e.message); }
+  });
+
   res.json({ success: true, route });
 });
 
@@ -154,6 +171,33 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
   job.pickup_state = pickup_state || null;
   job.dropoff_state = dropoff_state || null;
+
+  // Geocode and match drivers asynchronously (don't block response)
+  setImmediate(async () => {
+    try {
+      // Geocode pickup and dropoff
+      const pickupQuery = `${pickup_address}, ${pickup_city}, ${pickup_state || 'CO'}`;
+      const dropoffQuery = `${dropoff_address}, ${dropoff_city}, ${dropoff_state || 'CO'}`;
+      const [pickupCoords, dropoffCoords] = await Promise.all([
+        geocode(pickupQuery),
+        geocode(dropoffQuery)
+      ]);
+      if (pickupCoords && dropoffCoords) {
+        db.prepare(`UPDATE jobs SET pickup_lat=?, pickup_lng=?, dropoff_lat=?, dropoff_lng=? WHERE id=?`)
+          .run(pickupCoords.lat, pickupCoords.lng, dropoffCoords.lat, dropoffCoords.lng, id);
+        job.pickup_lat = pickupCoords.lat;
+        job.pickup_lng = pickupCoords.lng;
+        job.dropoff_lat = dropoffCoords.lat;
+        job.dropoff_lng = dropoffCoords.lng;
+        console.log(`Geocoded job ${id}: pickup ${pickupCoords.lat},${pickupCoords.lng} dropoff ${dropoffCoords.lat},${dropoffCoords.lng}`);
+        // Find and notify matched drivers
+        await notifyMatchedDrivers(job);
+      }
+    } catch(e) {
+      console.error('Geocode/match error:', e.message);
+    }
+  });
+
   res.json({ success: true, job });
 });
 
@@ -182,6 +226,28 @@ router.get('/', (req, res) => {
     j.dropoff_state = extra.dropoff_state || null;
   });
   res.json(jobs);
+});
+
+// Get jobs matched to this driver's routes
+router.get('/my/matches', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const matches = db.prepare(`
+    SELECT j.*, u.name as shipper_name, jm.notified_at,
+    j.pickup_lat, j.pickup_lng, j.dropoff_lat, j.dropoff_lng
+    FROM job_matches jm
+    JOIN jobs j ON jm.job_id = j.id
+    JOIN users u ON j.shipper_id = u.id
+    WHERE jm.driver_id = ? AND j.status = 'open'
+    ORDER BY jm.notified_at DESC
+    LIMIT 10
+  `).all(userId);
+  matches.forEach(j => {
+    j.listing_photos = JSON.parse(j.listing_photos || '[]');
+    const extra = JSON.parse(j.extra_data || '{}');
+    j.pickup_state = extra.pickup_state || null;
+    j.dropoff_state = extra.dropoff_state || null;
+  });
+  res.json(matches);
 });
 
 router.get('/my/all', requireAuth, (req, res) => {
