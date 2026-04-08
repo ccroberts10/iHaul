@@ -36,11 +36,15 @@ const upload = multer({
 });
 
 function requireAuth(req, res, next) {
-  // Primary: session cookie
-  // Fallback: x-user-id header (sent by frontend when cookie fails)
+  // Check session first, then x-user-id header
   const userId = req.session.userId || req.headers['x-user-id'];
   if (!userId) return res.status(401).json({ error: 'Login required' });
-  req.session.userId = userId; // ensure session is populated
+  // Verify user exists in DB when using header auth (security check)
+  if (!req.session.userId && req.headers['x-user-id']) {
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return res.status(401).json({ error: 'Login required' });
+  }
+  req.session.userId = userId;
   next();
 }
 
