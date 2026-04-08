@@ -109,9 +109,13 @@ app.post('/api/debug/backfill', async (req, res) => {
       const extra = JSON.parse(job.extra_data || '{}');
       const ps = extra.pickup_state || 'CO';
       const ds = extra.dropoff_state || 'CO';
+      const pz = extra.pickup_zip || '';
+      const dz = extra.dropoff_zip || '';
+      const pickupQ = pz ? `${job.pickup_address}, ${job.pickup_city}, ${ps} ${pz}` : `${job.pickup_address}, ${job.pickup_city}, ${ps}`;
+      const dropoffQ = dz ? `${job.dropoff_address}, ${job.dropoff_city}, ${ds} ${dz}` : `${job.dropoff_address}, ${job.dropoff_city}, ${ds}`;
       const [p, d] = await Promise.all([
-        geocode(`${job.pickup_address}, ${job.pickup_city}, ${ps}`),
-        geocode(`${job.dropoff_address}, ${job.dropoff_city}, ${ds}`)
+        geocode(pickupQ),
+        geocode(dropoffQ)
       ]);
       if (p && d) {
         db.prepare('UPDATE jobs SET pickup_lat=?,pickup_lng=?,dropoff_lat=?,dropoff_lng=? WHERE id=?')
