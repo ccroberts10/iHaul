@@ -82,14 +82,16 @@ router.post('/logout', (req, res) => {
 });
 
 router.get('/me', (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not logged in' });
+  const userId = req.session.userId || req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ error: 'Not logged in' });
   const user = db.prepare(`SELECT id, name, email, phone, vehicle_type, vehicle_description, haul_types,
     rating_total, rating_count, background_check, insurance_photo, insurance_verified,
-    insurance_submitted_at, driver_approved, license_photo, stripe_connect_id, stripe_connect_verified
-    FROM users WHERE id = ?`).get(req.session.userId);
+    insurance_submitted_at, driver_approved, license_photo, stripe_connect_id, stripe_connect_verified, license_plate
+    FROM users WHERE id = ?`).get(userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
   user.haul_types = JSON.parse(user.haul_types || '[]');
   user.avg_rating = user.rating_count > 0 ? (user.rating_total / user.rating_count).toFixed(1) : null;
+  user.userId = user.id;
   res.json(user);
 });
 
