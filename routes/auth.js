@@ -9,8 +9,10 @@ const { notifyAdminDriverSubmitted } = require('../utils/email');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../public/uploads');
     const fs = require('fs');
+    // Store on persistent volume so files survive redeploys
+    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../public');
+    const uploadDir = path.join(volumePath, 'uploads');
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     cb(null, uploadDir);
   },
@@ -34,7 +36,11 @@ const upload = multer({
 });
 
 function requireAuth(req, res, next) {
-  if (!req.session.userId) return res.status(401).json({ error: 'Login required' });
+  // Primary: session cookie
+  // Fallback: x-user-id header (sent by frontend when cookie fails)
+  const userId = req.session.userId || req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ error: 'Login required' });
+  req.session.userId = userId; // ensure session is populated
   next();
 }
 
@@ -93,7 +99,6 @@ router.post('/insurance', requireAuth, upload.single('insurance_card'), async (r
   const photoPath = `/uploads/${req.file.filename}`;
   db.prepare('UPDATE users SET insurance_photo = ?, insurance_submitted_at = CURRENT_TIMESTAMP, insurance_verified = 0, driver_approved = 0 WHERE id = ?')
     .run(photoPath, req.session.userId);
-  // Check if both docs are now present — if so notify admin
   const user = db.prepare('SELECT name, email, phone, vehicle_type, license_photo FROM users WHERE id = ?').get(req.session.userId);
   if (user.license_photo) {
     notifyAdminDriverSubmitted({
@@ -110,7 +115,6 @@ router.post('/license', requireAuth, upload.single('license_card'), async (req, 
   const photoPath = `/uploads/${req.file.filename}`;
   db.prepare('UPDATE users SET license_photo = ?, driver_approved = 0 WHERE id = ?')
     .run(photoPath, req.session.userId);
-  // Check if both docs are now present — if so notify admin
   const user = db.prepare('SELECT name, email, phone, vehicle_type, insurance_photo FROM users WHERE id = ?').get(req.session.userId);
   if (user.insurance_photo) {
     notifyAdminDriverSubmitted({
