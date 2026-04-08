@@ -213,9 +213,8 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
 
   // Check driver verification
   const driver = db.prepare('SELECT vehicle_type, license_photo, insurance_photo, insurance_verified, driver_approved FROM users WHERE id = ?').get(req.session.userId);
-  if (!driver.vehicle_type) return res.status(403).json({ error: 'You must add a vehicle to your profile before accepting jobs.' });
-  if (!driver.license_photo) return res.status(403).json({ error: 'You must upload your driver\'s license before accepting jobs. Go to Drive → Verification.' });
-  if (!driver.insurance_photo) return res.status(403).json({ error: 'You must upload your proof of insurance before accepting jobs. Go to Drive → Verification.' });
+  if (!driver.license_photo) return res.status(403).json({ error: 'Upload your driver\'s license first. Go to Drive tab → Driver Verification.' });
+  if (!driver.insurance_photo) return res.status(403).json({ error: 'Upload your proof of insurance first. Go to Drive tab → Driver Verification.' });
   if (!driver.driver_approved) return res.status(403).json({ error: 'Your documents are under review. You\'ll be notified once approved — usually within 24 hours.' });
   db.prepare('UPDATE jobs SET driver_id = ?, status = "accepted" WHERE id = ?').run(req.session.userId, job.id);
   if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
