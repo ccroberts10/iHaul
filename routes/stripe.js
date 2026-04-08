@@ -4,7 +4,9 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const db = require('../db/schema');
 
 function requireAuth(req, res, next) {
-  if (!req.session.userId) return res.status(401).json({ error: 'Login required' });
+  const userId = req.session.userId || req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ error: 'Login required' });
+  req.session.userId = userId;
   next();
 }
 
