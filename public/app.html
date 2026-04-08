@@ -673,9 +673,10 @@ async function login(){
   try{
     const r=await api('POST','/api/auth/login',{email,password,keepSignedIn});
     currentUser=r;
-    // Save email for next time, save keepSignedIn preference
     localStorage.setItem('detour_email',email);
     localStorage.setItem('detour_keep',keepSignedIn?'1':'0');
+    localStorage.setItem('detour_uid',r.userId);
+    localStorage.setItem('detour_name',r.name);
     enterApp(r.name);
   }catch(e){document.getElementById('login-error').textContent=e.message;}
 }
@@ -685,11 +686,17 @@ async function register(){
   if(!name||!email||!password){document.getElementById('reg-error').textContent='Name, email, and password required';return;}
   if(password.length<8){document.getElementById('reg-error').textContent='Password must be at least 8 characters';return;}
   if(!document.getElementById('reg-terms').checked){document.getElementById('reg-error').textContent='Please agree to the Terms of Service to continue';return;}
-  try{const r=await api('POST','/api/auth/register',{name,email,phone,password,vehicle_type,license_plate});currentUser=r;enterApp(r.name);}
+  try{const r=await api('POST','/api/auth/register',{name,email,phone,password,vehicle_type,license_plate});currentUser=r;localStorage.setItem('detour_uid',r.userId);localStorage.setItem('detour_name',r.name);enterApp(r.name);}
   catch(e){document.getElementById('reg-error').textContent=e.message;}
 }
 async function logout(){
-  await api('POST','/api/auth/logout');currentUser=null;
+  await api('POST','/api/auth/logout');
+  currentUser=null;
+  localStorage.removeItem('detour_uid');
+  localStorage.removeItem('detour_name');
+  localStorage.removeItem('detour_vehicle');
+  localStorage.removeItem('detour_vehicle_desc');
+  localStorage.removeItem('detour_plate');
   document.getElementById('auth-screen').classList.add('active');
   document.getElementById('app-screen').classList.remove('active');
 }
@@ -701,6 +708,13 @@ function enterApp(name){
   const soon=new Date(Date.now()+3600000);
   const local=new Date(soon.getTime()-soon.getTimezoneOffset()*60000).toISOString().slice(0,16);
   const d=document.getElementById('route-depart');if(d)d.value=local;
+  // Restore vehicle info
+  const vt=localStorage.getItem('detour_vehicle');
+  const vd=localStorage.getItem('detour_vehicle_desc');
+  const lp=localStorage.getItem('detour_plate');
+  if(vt){const el=document.getElementById('driver-vehicle-type');if(el)el.value=vt;}
+  if(vd){const el=document.getElementById('driver-vehicle-desc');if(el)el.value=vd;}
+  if(lp){const el=document.getElementById('driver-license-plate');if(el)el.value=lp;}
   loadMyJobs();
   loadOpenJobs();
   requestPushPermission();
@@ -1191,6 +1205,9 @@ async function updateVehicle(){
   if(!vehicle_type){toast('Please select a vehicle type');return;}
   try{
     await api('POST','/api/auth/update-profile',{vehicle_type,vehicle_description,license_plate});
+    localStorage.setItem('detour_vehicle',vehicle_type);
+    localStorage.setItem('detour_vehicle_desc',vehicle_description);
+    localStorage.setItem('detour_plate',license_plate);
     toast('Vehicle info saved ✓');
   }catch(e){toast(e.message||'Could not save vehicle info');}
 }
@@ -1286,12 +1303,14 @@ async function checkAndShowConnectPrompt(){
 }
 (function(){const params=new URLSearchParams(window.location.search);if(params.get('onboard')==='complete'){setTimeout(()=>toast("Payout account connected! You're ready to earn. 🎉"),800);window.history.replaceState({},'','/');}else if(params.get('onboard')==='error'){setTimeout(()=>toast('Something went wrong. Try connecting again.'),800);window.history.replaceState({},'','/');}})();
 async function api(method,url,body){
-  const opts={method,headers:{'Content-Type':'application/json'},credentials:'include'};
+  const headers={'Content-Type':'application/json'};
+  // Always send userId as header fallback in case cookie session fails
+  if(currentUser?.userId)headers['x-user-id']=currentUser.userId;
+  const opts={method,headers,credentials:'include'};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
   const res=await fetch(url,opts);
   const data=await res.json();
   if(res.status===401){
-    // Session expired - redirect to login
     toast('Session expired — please sign in again');
     setTimeout(()=>{
       currentUser=null;
@@ -1318,11 +1337,24 @@ function toast(msg){const el=document.getElementById('toast');el.textContent=msg
 // Check if already logged in
 (async()=>{
   try{
+    // Restore userId from localStorage for header fallback
+    const storedUid=localStorage.getItem('detour_uid');
+    const storedName=localStorage.getItem('detour_name');
+    if(storedUid)currentUser={userId:storedUid,name:storedName};
     const user=await api('GET','/api/auth/me');
     currentUser=user;
+    localStorage.setItem('detour_uid',user.userId||user.id);
+    localStorage.setItem('detour_name',user.name);
+    localStorage.setItem('detour_vehicle',user.vehicle_type||'');
+    localStorage.setItem('detour_vehicle_desc',user.vehicle_description||'');
+    localStorage.setItem('detour_plate',user.license_plate||'');
     enterApp(user.name);
     updateVerificationStatus(user);
-  }catch(e){}
+  }catch(e){
+    // Clear stored user on auth failure
+    localStorage.removeItem('detour_uid');
+    localStorage.removeItem('detour_name');
+  }
 })();
 
 </script>
