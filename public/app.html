@@ -199,6 +199,8 @@ textarea{resize:none}
 .nav-badge{position:absolute;top:2px;right:8px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid var(--dark)}
 .nav-item{position:relative}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.job-map{width:100%;height:200px;border-radius:var(--rs);overflow:hidden;margin:10px 0;border:0.5px solid rgba(255,255,255,0.08);}
+.matched-badge{display:inline-block;background:rgba(0,194,168,0.15);border:1px solid var(--teal);color:var(--teal);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px;letter-spacing:0.05em;}
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-thumb{background:var(--dark3);border-radius:2px}
 </style>
@@ -294,6 +296,9 @@ textarea{resize:none}
           <div class="action-sub">Post route or browse jobs</div>
         </div>
       </div>
+      <div class="section-head" style="margin-top:20px;"><span>🎯 Matched To Your Route</span><button class="btn-ghost" onclick="loadMatchedJobs()">Refresh</button></div>
+      <div id="matched-jobs-list" class="jobs-list" style="margin-bottom:6px;"></div>
+
       <div class="section-head" style="margin-top:20px;"><span>Open Deliveries Near You</span><button class="btn-ghost" onclick="loadOpenJobs()">Refresh</button></div>
       <div id="open-jobs-list" class="jobs-list"><div class="empty-state">Loading open deliveries...</div></div>
 
@@ -464,6 +469,12 @@ textarea{resize:none}
           <div class="field-group"><input type="text" id="driver-vehicle-desc" placeholder="e.g. Toyota Tacoma, truck bed available"></div>
           <div class="field-group"><input type="text" id="driver-license-plate" placeholder="License plate (e.g. ABC-1234)" style="text-transform:uppercase;"></div>
           <button class="btn-secondary" style="margin-top:4px;" onclick="updateVehicle()">Save Vehicle Info</button>
+        </div>
+        <div class="form-section" style="margin-top:12px;">
+          <div class="form-section-title">📍 Your Starting Location</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:10px;line-height:1.5;">We'll match you to nearby jobs automatically and alert you in the app.</div>
+          <div class="field-group"><input type="text" id="driver-home-address" placeholder="Home address or starting city (e.g. 225 E 8th Ave, Durango, CO)"></div>
+          <button class="btn-secondary" style="margin-top:4px;" onclick="updateVehicle()">Save Location</button>
         </div>
         <div class="form-section" style="margin-top:12px;">
           <div class="form-section-title">🛡️ Driver Verification <button class="btn-ghost" style="font-size:11px;padding:2px 8px;margin-left:6px;" onclick="refreshVerificationStatus()">↻ Refresh</button></div>
@@ -741,13 +752,14 @@ function enterApp(name){
   if(lpl){const el=document.getElementById('driver-license-plate');if(el)el.value=lpl;}
   loadMyJobs();
   loadOpenJobs();
+  loadMatchedJobs();
   requestPushPermission();
   startJobPolling();
 }
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if(id==='view-home'){loadMyJobs();loadOpenJobs();}
+  if(id==='view-home'){loadMyJobs();loadOpenJobs();loadMatchedJobs();}
   if(id==='view-post')setTimeout(initStripeElements,100);
   if(id==='view-drive'){checkAndShowConnectPrompt();refreshVerificationStatus();}
 }
@@ -878,6 +890,38 @@ function filterJobs(filter,btn){
   btn.classList.add('active');
   loadMyJobs();
 }
+async function loadMatchedJobs(){
+  const list=document.getElementById('matched-jobs-list');
+  if(!list)return;
+  try{
+    const jobs=await api('GET','/api/jobs/my/matches');
+    if(!jobs.length){list.innerHTML='';return;} // hide section if no matches
+    list.innerHTML=`<div style="font-size:11px;color:var(--teal);margin-bottom:8px;font-weight:600;">🎯 ${jobs.length} job${jobs.length>1?'s':''} match your route — swipe right to accept</div>`+jobs.map(j=>jobCard(j,true)).join('');
+  }catch(e){list.innerHTML='';}
+}
+
+function renderJobMap(job){
+  if(!job.pickup_lat||!job.dropoff_lat)return'';
+  const pickupLat=job.pickup_lat,pickupLng=job.pickup_lng;
+  const dropoffLat=job.dropoff_lat,dropoffLng=job.dropoff_lng;
+  // Center map between pickup and dropoff
+  const centerLat=(pickupLat+dropoffLat)/2;
+  const centerLng=(pickupLng+dropoffLng)/2;
+  // Use OpenStreetMap static map via tile server
+  const zoom=11;
+  const mapUrl=`https://www.openstreetmap.org/export/embed.html?bbox=${Math.min(pickupLng,dropoffLng)-0.1},${Math.min(pickupLat,dropoffLat)-0.1},${Math.max(pickupLng,dropoffLng)+0.1},${Math.max(pickupLat,dropoffLat)+0.1}&layer=mapnik&marker=${pickupLat},${pickupLng}`;
+  return`<div class="job-map"><iframe src="${mapUrl}" style="width:100%;height:100%;border:none;" loading="lazy" title="Job route map"></iframe></div>
+  <div style="display:flex;gap:8px;margin-bottom:10px;">
+    <div style="flex:1;background:rgba(61,204,120,0.1);border:0.5px solid rgba(61,204,120,0.2);border-radius:var(--rs);padding:8px 10px;">
+      <div style="font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">📍 Pickup</div>
+      <div style="font-size:12px;">${escHtml(job.pickup_address)}, ${escHtml(job.pickup_city)}</div>
+    </div>
+    <div style="flex:1;background:rgba(0,194,168,0.1);border:0.5px solid rgba(0,194,168,0.2);border-radius:var(--rs);padding:8px 10px;">
+      <div style="font-size:9px;color:var(--teal);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">🏁 Dropoff</div>
+      <div style="font-size:12px;">${escHtml(job.dropoff_address)}, ${escHtml(job.dropoff_city)}</div>
+    </div>
+  </div>`;
+}
 async function loadOpenJobs(){
   const list=document.getElementById('open-jobs-list');
   if(!list)return;
@@ -938,7 +982,7 @@ function renderJobDetail(job,messages){
   if(job.listing_photos?.length)h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Item Photos</div><div class="photo-upload-row">${job.listing_photos.map(p=>`<img class="photo-thumb" src="${p}">`).join('')}</div></div>`;
   if(job.job_type==='marketplace'&&(extra.seller_name||extra.buyer_name))h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Marketplace Parties</div>${extra.seller_name?`<div class="detail-grid"><div><div class="detail-label">Seller</div><div class="detail-val">${escHtml(extra.seller_name)}</div></div>${extra.seller_phone?`<div><div class="detail-label">Phone</div><div class="detail-val">${escHtml(extra.seller_phone)}</div></div>`:''}</div>`:''}${extra.buyer_name?`<div class="detail-grid" style="margin-top:8px;"><div><div class="detail-label">Buyer</div><div class="detail-val">${escHtml(extra.buyer_name)}</div></div>${extra.buyer_phone?`<div><div class="detail-label">Phone</div><div class="detail-val">${escHtml(extra.buyer_phone)}</div></div>`:''}</div>`:''}</div>`;
   if(job.job_type==='errand'&&(extra.store_name||extra.item_to_pickup))h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Errand Details</div>${extra.store_name?`<div><div class="detail-label">Store</div><div class="detail-val">${escHtml(extra.store_name)}</div></div>`:''}${extra.item_to_pickup?`<div style="margin-top:8px;"><div class="detail-label">Item to pick up</div><div class="detail-val" style="font-size:13px;">${escHtml(extra.item_to_pickup)}</div></div>`:''}</div>`;
-  h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Route</div><div class="job-route" style="margin-bottom:10px;"><div class="route-dot start"></div><div class="route-city">${escHtml(job.pickup_city)}</div><div class="route-line"></div><div class="route-city">${escHtml(job.dropoff_city)}</div><div class="route-dot end"></div></div><div class="detail-grid"><div><div class="detail-label">Pickup</div><div class="detail-val" style="font-size:13px;">${escHtml(job.pickup_address)}</div></div><div><div class="detail-label">Dropoff</div><div class="detail-val" style="font-size:13px;">${escHtml(job.dropoff_address)}</div></div></div>${job.notes?`<div style="margin-top:8px;"><div class="detail-label">Notes</div><div class="detail-val" style="font-size:13px;">${escHtml(job.notes)}</div></div>`:''} ${(isDriver||currentJobPerspective==='driver')?mapsButtons(job):''}</div>`;
+  h+=`<div class="job-detail-card"><div class="detail-label" style="margin-bottom:10px;">Route</div>${renderJobMap(job)}<div class="job-route" style="margin-bottom:10px;"><div class="route-dot start"></div><div class="route-city">${escHtml(job.pickup_city)}</div><div class="route-line"></div><div class="route-city">${escHtml(job.dropoff_city)}</div><div class="route-dot end"></div></div><div class="detail-grid"><div><div class="detail-label">Pickup</div><div class="detail-val" style="font-size:13px;">${escHtml(job.pickup_address)}</div></div><div><div class="detail-label">Dropoff</div><div class="detail-val" style="font-size:13px;">${escHtml(job.dropoff_address)}</div></div></div>${job.notes?`<div style="margin-top:8px;"><div class="detail-label">Notes</div><div class="detail-val" style="font-size:13px;">${escHtml(job.notes)}</div></div>`:''} ${(isDriver||currentJobPerspective==='driver')?mapsButtons(job):''}</div>`;
   if(job.status==='open'&&currentJobPerspective==='driver'&&!isShipper)h+=`<button class="btn-primary btn-large" onclick="acceptJob('${job.id}')">Accept — Earn $${dp} →</button>`;
   if(job.status==='accepted'&&isDriver)h+=`<button class="im-here-btn" onclick="imHere('${job.id}')">📍 I'm here — notify shipper</button>`;
   if(job.status==='open'&&isShipper)h+=`<button class="btn-secondary btn-large" style="background:rgba(240,85,85,0.1);border-color:rgba(240,85,85,0.3);color:var(--red);margin-top:8px;" onclick="deleteJob('${job.id}')">🗑 Delete This Listing</button>`;
@@ -1183,27 +1227,33 @@ function showPushNotification(title,body){
 
 // Poll for new jobs and notify driver
 let lastJobCount=0;
+let lastMatchCount=0;
 function startJobPolling(){
   setInterval(async()=>{
     try{
       const jobs=await api('GET','/api/jobs');
       if(jobs.length>lastJobCount&&lastJobCount>0){
         const newest=jobs[0];
-        showPushNotification(
-          '📦 New delivery available!',
-          `${newest.title} — ${newest.pickup_city} → ${newest.dropoff_city} — Earn $${(newest.offered_price*0.75).toFixed(0)}`
-        );
-        // Update nav badge
-        const driveNav=document.querySelectorAll('.nav-item')[2];
-        if(driveNav&&!driveNav.querySelector('.nav-badge')){
-          const badge=document.createElement('div');
-          badge.className='nav-badge';
-          driveNav.appendChild(badge);
-        }
+        showPushNotification('📦 New delivery available!',
+          `${newest.title} — ${newest.pickup_city} → ${newest.dropoff_city} — Earn $${(newest.offered_price*0.75).toFixed(0)}`);
       }
       lastJobCount=jobs.length;
     }catch(e){}
-  },30000); // check every 30 seconds
+    try{
+      const matches=await api('GET','/api/jobs/my/matches');
+      if(matches.length>lastMatchCount&&lastMatchCount>0){
+        const newest=matches[0];
+        showPushNotification('🎯 Job matched to your route!',
+          `${newest.title} — ${newest.pickup_city} → ${newest.dropoff_city} — Earn $${(newest.offered_price*0.75).toFixed(0)}`);
+        loadMatchedJobs();
+        const homeNav=document.querySelectorAll('.nav-item')[0];
+        if(homeNav&&!homeNav.querySelector('.nav-badge')){
+          const badge=document.createElement('div');badge.className='nav-badge';homeNav.appendChild(badge);
+        }
+      }
+      lastMatchCount=matches.length;
+    }catch(e){}
+  },30000);
 }
 
 async function deleteJob(jobId){
@@ -1241,24 +1291,26 @@ async function updateVehicle(){
   const vehicle_type=document.getElementById('driver-vehicle-type').value;
   const vehicle_description=document.getElementById('driver-vehicle-desc').value.trim();
   const license_plate=document.getElementById('driver-license-plate').value.trim().toUpperCase();
-  if(!vehicle_type){toast('Please select a vehicle type');return;}
+  const home_address=document.getElementById('driver-home-address')?.value.trim()||'';
+  if(!vehicle_type&&!home_address){toast('Please select a vehicle type or enter your home address');return;}
   const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid');
-  localStorage.setItem(`detour_vehicle_${uid}`,vehicle_type);
-  localStorage.setItem(`detour_vehicle_desc_${uid}`,vehicle_description);
-  localStorage.setItem(`detour_plate_${uid}`,license_plate);
+  if(vehicle_type){
+    localStorage.setItem(`detour_vehicle_${uid}`,vehicle_type);
+    localStorage.setItem(`detour_vehicle_desc_${uid}`,vehicle_description);
+    localStorage.setItem(`detour_plate_${uid}`,license_plate);
+  }
   try{
     const res=await fetch('/api/auth/update-profile',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-user-id':uid||''},
       credentials:'include',
-      body:JSON.stringify({vehicle_type,vehicle_description,license_plate})
+      body:JSON.stringify({vehicle_type,vehicle_description,license_plate,home_address})
     });
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Server error');
-    toast('Vehicle info saved ✓');
+    toast(home_address?'Location saved — we\'ll match jobs near you ✓':'Vehicle info saved ✓');
   }catch(e){
-    toast('Vehicle info saved locally ✓');
-    console.log('Vehicle server save error:',e.message);
+    toast('Saved locally ✓');
   }
 }
 function updateVerificationStatus(user){
