@@ -6,16 +6,22 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const multer = require('multer');
 const path = require('path');
 
+const fs = require('fs');
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../public/uploads')),
+  destination: (req, file, cb) => {
+    const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../public');
+    const uploadDir = path.join(volumePath, 'uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
   filename: (req, file, cb) => cb(null, `${uuidv4()}-${file.originalname}`)
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 function requireAuth(req, res, next) {
-  const userId = req.session.userId;
-  console.log('requireAuth - sessionID:', req.sessionID, 'userId:', userId, 'cookie:', req.headers.cookie ? 'present' : 'MISSING');
+  const userId = req.session.userId || req.headers['x-user-id'];
   if (!userId) return res.status(401).json({ error: 'Login required' });
+  req.session.userId = userId;
   next();
 }
 
