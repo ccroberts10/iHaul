@@ -673,9 +673,10 @@ async function login(){
   try{
     const r=await api('POST','/api/auth/login',{email,password,keepSignedIn});
     currentUser=r;
+    currentUser.userId=r.userId||r.id;
     localStorage.setItem('detour_email',email);
     localStorage.setItem('detour_keep',keepSignedIn?'1':'0');
-    localStorage.setItem('detour_uid',r.userId);
+    localStorage.setItem('detour_uid',currentUser.userId);
     localStorage.setItem('detour_name',r.name);
     enterApp(r.name);
   }catch(e){document.getElementById('login-error').textContent=e.message;}
@@ -1333,8 +1334,8 @@ async function checkAndShowConnectPrompt(){
 (function(){const params=new URLSearchParams(window.location.search);if(params.get('onboard')==='complete'){setTimeout(()=>toast("Payout account connected! You're ready to earn. 🎉"),800);window.history.replaceState({},'','/');}else if(params.get('onboard')==='error'){setTimeout(()=>toast('Something went wrong. Try connecting again.'),800);window.history.replaceState({},'','/');}})();
 async function api(method,url,body){
   const headers={'Content-Type':'application/json'};
-  // Always send userId as header fallback in case cookie session fails
-  if(currentUser?.userId)headers['x-user-id']=currentUser.userId;
+  const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid');
+  if(uid)headers['x-user-id']=uid;
   const opts={method,headers,credentials:'include'};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
   const res=await fetch(url,opts);
@@ -1343,6 +1344,8 @@ async function api(method,url,body){
     toast('Session expired — please sign in again');
     setTimeout(()=>{
       currentUser=null;
+      localStorage.removeItem('detour_uid');
+      localStorage.removeItem('detour_name');
       document.getElementById('auth-screen').classList.add('active');
       document.getElementById('app-screen').classList.remove('active');
     },1500);
