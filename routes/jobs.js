@@ -144,20 +144,27 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   });
 
   let paymentIntentId = null;
-  // Create Stripe PaymentIntent with 8 second timeout — job saves regardless
+  // Create and confirm Stripe PaymentIntent — holds funds until driver accepts
   if (process.env.STRIPE_SECRET_KEY && req.body.payment_method_id) {
     try {
       const piPromise = stripe.paymentIntents.create({
         amount: Math.round(price * 100),
         currency: 'usd',
-        capture_method: 'manual',
+        capture_method: 'manual',  // authorize only — captured when driver accepts
         payment_method: req.body.payment_method_id,
-        confirm: false,
+        confirm: true,             // charge card immediately to hold funds
+        return_url: 'https://detourdeliver.com/app',
         metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
       });
       const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout')), 8000));
       const pi = await Promise.race([piPromise, timeoutPromise]);
       paymentIntentId = pi.id;
+      if (pi.status === 'requires_action') {
+        // 3DS authentication required — save the PI but flag it
+        console.log('PaymentIntent requires 3DS action:', pi.id);
+      } else if (pi.status !== 'requires_capture') {
+        console.log('Unexpected PI status:', pi.status, pi.id);
+      }
     } catch (e) {
       console.error('Stripe PaymentIntent error (job still saved):', e.message);
     }
@@ -312,18 +319,19 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
 
     db.prepare("UPDATE jobs SET driver_id = ?, status = 'accepted' WHERE id = ?").run(req.session.userId, job.id);
 
-    // Stripe capture — run async, don't block the response
+    // Stripe capture — funds already held, just capture on accept
     if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
       setImmediate(async () => {
         try {
           const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
-          if (pi.status === 'requires_confirmation') {
-            await stripe.paymentIntents.confirm(job.stripe_payment_intent_id);
-          } else if (pi.status === 'requires_capture') {
+          if (pi.status === 'requires_capture') {
             await stripe.paymentIntents.capture(job.stripe_payment_intent_id);
+            console.log('Payment captured for job:', job.id);
+          } else {
+            console.log('PI status on accept:', pi.status, 'job:', job.id);
           }
         } catch (e) {
-          console.error('Stripe accept error (non-fatal):', e.message);
+          console.error('Stripe capture error (non-fatal):', e.message);
         }
       });
     }
@@ -364,14 +372,22 @@ router.post('/:id/confirm', requireAuth, upload.array('photos', 6), async (req, 
   const photos = (req.files || []).map(f => `/uploads/${f.filename}`);
   const existing = JSON.parse(job.dropoff_photos || '[]');
   let transferId = null;
-  if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY !== 'sk_test_placeholder') {
+  if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
     try {
-      const driver = db.prepare('SELECT stripe_customer_id FROM users WHERE id = ?').get(job.driver_id);
-      if (driver?.stripe_customer_id) {
-        const t = await stripe.transfers.create({ amount: Math.round(job.driver_payout * 100), currency: 'usd', destination: driver.stripe_customer_id, metadata: { job_id: job.id } });
+      const driver = db.prepare('SELECT stripe_connect_id FROM users WHERE id = ?').get(job.driver_id);
+      if (driver?.stripe_connect_id) {
+        const t = await stripe.transfers.create({
+          amount: Math.round(job.driver_payout * 100),
+          currency: 'usd',
+          destination: driver.stripe_connect_id,
+          metadata: { job_id: job.id }
+        });
         transferId = t.id;
+        console.log('Driver payout transferred:', transferId, 'amount:', job.driver_payout);
+      } else {
+        console.log('Driver has no Connect account — payout skipped');
       }
-    } catch (e) { console.error(e.message); }
+    } catch (e) { console.error('Transfer error:', e.message); }
   }
   db.prepare("UPDATE jobs SET dropoff_photos = ?, dropoff_confirmed_at = CURRENT_TIMESTAMP, status = 'completed', stripe_transfer_id = ? WHERE id = ?")
     .run(JSON.stringify([...existing, ...photos]), transferId, job.id);
