@@ -144,19 +144,23 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   });
 
   let paymentIntentId = null;
-  if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_placeholder') {
+  // Create Stripe PaymentIntent with 8 second timeout — job saves regardless
+  if (process.env.STRIPE_SECRET_KEY && req.body.payment_method_id) {
     try {
-      const piParams = {
-        amount: Math.round(price * 100), currency: 'usd', capture_method: 'manual',
+      const piPromise = stripe.paymentIntents.create({
+        amount: Math.round(price * 100),
+        currency: 'usd',
+        capture_method: 'manual',
+        payment_method: req.body.payment_method_id,
+        confirm: false,
         metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
-      };
-      if (req.body.payment_method_id) {
-        piParams.payment_method = req.body.payment_method_id;
-        piParams.confirm = false; // shipper confirms when driver accepts
-      }
-      const pi = await stripe.paymentIntents.create(piParams);
+      });
+      const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout')), 8000));
+      const pi = await Promise.race([piPromise, timeoutPromise]);
       paymentIntentId = pi.id;
-    } catch (e) { console.error('Stripe error:', e.message); }
+    } catch (e) {
+      console.error('Stripe PaymentIntent error (job still saved):', e.message);
+    }
   }
 
   db.prepare(`INSERT INTO jobs (id, shipper_id, job_type, title, description, item_size, item_weight,
@@ -304,17 +308,21 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
   if (!driver.insurance_photo) return res.status(403).json({ error: 'Upload your proof of insurance first. Go to Drive tab → Driver Verification.' });
   if (!driver.driver_approved) return res.status(403).json({ error: 'Your documents are under review. You\'ll be notified once approved — usually within 24 hours.' });
   db.prepare('UPDATE jobs SET driver_id = ?, status = "accepted" WHERE id = ?').run(req.session.userId, job.id);
+
+  // Stripe capture — run async, don't block the response
   if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
-    try {
-      const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
-      // Confirm first if not already confirmed, then capture
-      if (pi.status === 'requires_confirmation') {
-        await stripe.paymentIntents.confirm(job.stripe_payment_intent_id);
+    setImmediate(async () => {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
+        if (pi.status === 'requires_confirmation') {
+          await stripe.paymentIntents.confirm(job.stripe_payment_intent_id);
+        } else if (pi.status === 'requires_capture') {
+          await stripe.paymentIntents.capture(job.stripe_payment_intent_id);
+        }
+      } catch (e) {
+        console.error('Stripe accept error (non-fatal):', e.message);
       }
-      if (pi.status === 'requires_capture' || pi.status === 'requires_confirmation') {
-        await stripe.paymentIntents.capture(job.stripe_payment_intent_id);
-      }
-    } catch (e) { console.error('Stripe accept error:', e.message); }
+    });
   }
   const extra = JSON.parse(job.extra_data || '{}');
   let firstMsg = "I've accepted your delivery! When and where should we meet for pickup?";
