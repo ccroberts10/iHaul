@@ -1415,11 +1415,38 @@ async function acceptJob(jobId){
 
 // ── PUSH NOTIFICATIONS ──
 async function requestPushPermission(){
-  if(!('Notification' in window))return;
-  if(Notification.permission==='granted')return;
-  if(Notification.permission!=='denied'){
-    await Notification.requestPermission();
-  }
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return;
+  try{
+    const permission = Notification.permission==='granted' ? 'granted' : await Notification.requestPermission();
+    if(permission!=='granted')return;
+    const reg = await navigator.serviceWorker.ready;
+    // Check if already subscribed
+    const existing = await reg.pushManager.getSubscription();
+    if(existing){ await savePushSub(existing); return; }
+    // Get VAPID key from server
+    const {key} = await fetch('/api/push/vapid-public-key').then(r=>r.json()).catch(()=>({}));
+    if(!key){ console.log('No VAPID key configured'); return; }
+    // Convert VAPID key to Uint8Array
+    const raw=atob(key.replace(/-/g,'+').replace(/_/g,'/'));
+    const vapidKey=new Uint8Array([...raw].map(c=>c.charCodeAt(0)));
+    // Subscribe
+    const sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:vapidKey});
+    await savePushSub(sub);
+    console.log('Web push subscribed ✓');
+  }catch(e){ console.log('Push setup:', e.message); }
+}
+
+async function savePushSub(sub){
+  const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid')||'';
+  if(!uid)return;
+  try{
+    await fetch('/api/push/subscribe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-user-id':uid},
+      credentials:'include',
+      body:JSON.stringify({subscription:sub.toJSON()})
+    });
+  }catch(e){ console.log('Save sub error:', e.message); }
 }
 
 function showPushNotification(title,body){
