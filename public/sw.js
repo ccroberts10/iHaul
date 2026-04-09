@@ -1,4 +1,4 @@
-const CACHE = 'detour-v1';
+const CACHE = 'detour-v2';
 const OFFLINE_URL = '/app';
 
 const PRECACHE = [
@@ -27,27 +27,48 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
-
-  // Always go to network for API calls
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(request));
     return;
   }
-
-  // Network first for everything else, fall back to cache
   event.respondWith(
     fetch(request)
       .then(response => {
-        // Cache successful GET responses
         if (request.method === 'GET' && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE).then(cache => cache.put(request, clone));
         }
         return response;
       })
-      .catch(() => {
-        // Offline fallback — return cached version or app shell
-        return caches.match(request) || caches.match(OFFLINE_URL);
-      })
+      .catch(() => caches.match(request) || caches.match(OFFLINE_URL))
+  );
+});
+
+// Push — show notification even when app is closed
+self.addEventListener('push', event => {
+  let data = { title: '📦 New job on Detour!', body: 'A delivery near you is available.', url: '/app' };
+  try { data = event.data.json(); } catch(e) {}
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: data.url || '/app' },
+      vibrate: [200, 100, 200],
+      requireInteraction: false
+    })
+  );
+});
+
+// Notification click — open app
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/app';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes('detourdeliver.com'));
+      if (existing) return existing.focus();
+      return clients.openWindow(url);
+    })
   );
 });
