@@ -146,25 +146,36 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   let paymentIntentId = null;
   let clientSecret = null;
   let stripeError = null;
+  let stripeCustomerId = null;
 
   if (process.env.STRIPE_SECRET_KEY) {
     try {
-      const pi = await Promise.race([
-        stripe.paymentIntents.create({
-          amount: Math.round(price * 100),
-          currency: 'usd',
-          capture_method: 'manual',
-          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
-          metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
-        }),
-        new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout')), 10000))
-      ]);
-      paymentIntentId = pi.id;
-      clientSecret = pi.client_secret;
-      console.log('PI created:', pi.id, 'status:', pi.status);
+      const userId = req.session.userId;
+      const user = db.prepare('SELECT email, stripe_customer_id FROM users WHERE id = ?').get(userId);
+
+      // Get or create Stripe customer on platform account
+      let customerId = user?.stripe_customer_id;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user?.email,
+          metadata: { detour_user_id: userId }
+        });
+        customerId = customer.id;
+        db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, userId);
+      }
+      stripeCustomerId = customerId;
+
+      // Create SetupIntent to save card — actual charge happens when driver accepts
+      const si = await stripe.setupIntents.create({
+        customer: customerId,
+        usage: 'off_session',
+        metadata: { job_id: id, shipper_id: userId }
+      });
+      clientSecret = si.client_secret;
+      console.log('SetupIntent created:', si.id, 'customer:', customerId);
     } catch(e) {
       stripeError = { message: e.message, code: e.code, type: e.type };
-      console.error('Stripe PI error:', e.message, e.code);
+      console.error('Stripe SetupIntent error:', e.message);
     }
   }
 
@@ -317,19 +328,41 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
 
     db.prepare("UPDATE jobs SET driver_id = ?, status = 'accepted' WHERE id = ?").run(req.session.userId, job.id);
 
-    // Stripe capture — funds already held, just capture on accept
-    if (job.stripe_payment_intent_id && process.env.STRIPE_SECRET_KEY) {
+    // Charge the shipper's saved card on accept
+    if (process.env.STRIPE_SECRET_KEY) {
       setImmediate(async () => {
         try {
-          const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
-          if (pi.status === 'requires_capture') {
-            await stripe.paymentIntents.capture(job.stripe_payment_intent_id);
-            console.log('Payment captured for job:', job.id);
-          } else {
-            console.log('PI status on accept:', pi.status, 'job:', job.id);
+          const shipper = db.prepare('SELECT stripe_customer_id FROM users WHERE id = ?').get(job.shipper_id);
+          if (!shipper?.stripe_customer_id) {
+            console.log('No stripe customer for shipper — skip charge');
+            return;
           }
-        } catch (e) {
-          console.error('Stripe capture error (non-fatal):', e.message);
+          // Get the default saved payment method
+          const paymentMethods = await stripe.paymentMethods.list({
+            customer: shipper.stripe_customer_id,
+            type: 'card',
+            limit: 1
+          });
+          if (!paymentMethods.data.length) {
+            console.log('No saved card for shipper — skip charge');
+            return;
+          }
+          const pmId = paymentMethods.data[0].id;
+          // Create and confirm PI with the saved card — off_session since shipper isn't present
+          const pi = await stripe.paymentIntents.create({
+            amount: Math.round(job.offered_price * 100),
+            currency: 'usd',
+            capture_method: 'manual',
+            customer: shipper.stripe_customer_id,
+            payment_method: pmId,
+            confirm: true,
+            off_session: true,
+            metadata: { job_id: job.id, shipper_id: job.shipper_id }
+          });
+          db.prepare('UPDATE jobs SET stripe_payment_intent_id = ? WHERE id = ?').run(pi.id, job.id);
+          console.log('Charged on accept:', pi.id, 'status:', pi.status, 'job:', job.id);
+        } catch(e) {
+          console.error('Charge on accept error:', e.message, e.code);
         }
       });
     }
