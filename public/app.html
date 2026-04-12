@@ -684,30 +684,11 @@ textarea{resize:none}
         <option value="oversized">Oversized / Furniture</option>
       </select>
     </div>
-    <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">💳 Payment — held until driver accepts</div>
-      <!-- Saved card display -->
-      <div id="qp-saved-card" style="display:none;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--dark3);border:0.5px solid rgba(255,255,255,0.1);border-radius:var(--rs);">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span id="qp-card-icon" style="font-size:18px;">💳</span>
-          <div>
-            <div id="qp-card-label" style="font-size:14px;font-weight:600;color:#fff;"></div>
-            <div id="qp-card-expiry" style="font-size:11px;color:rgba(255,255,255,0.4);"></div>
-          </div>
-        </div>
-        <button onclick="showNewCardEntry()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;">Change</button>
+    <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;" id="qp-payment-section">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">💳 Payment — charged when driver accepts</div>
+      <div id="qp-payment-status">
+        <div style="display:flex;align-items:center;justify-content:center;padding:12px;color:rgba(255,255,255,0.3);font-size:13px;">Checking payment method...</div>
       </div>
-      <!-- New card entry -->
-      <div id="qp-new-card" style="display:none;">
-        <div id="qp-stripe-element" style="background:var(--dark3);border:0.5px solid rgba(255,255,255,0.1);border-radius:var(--rs);padding:12px 14px;"></div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,0.5);cursor:pointer;">
-            <input type="checkbox" id="qp-save-card" checked style="accent-color:var(--teal);"> Save card for next time
-          </label>
-        </div>
-      </div>
-      <!-- Apple Pay / no card yet -->
-      <div id="qp-payment-request" style="display:none;margin-bottom:8px;"></div>
       <div id="qp-stripe-error" class="error-msg" style="margin-top:6px;"></div>
     </div>
     <div id="qp-error" class="error-msg"></div>
@@ -1303,54 +1284,45 @@ document.addEventListener('click',(e)=>{
     document.querySelectorAll('.autocomplete-list').forEach(l=>l.style.display='none');
   }
 });
-let qpStripeCard=null, qpSavedPaymentMethodId=null, qpPaymentRequest=null;
-function showNewCardEntry(){
-  document.getElementById('qp-saved-card').style.display='none';
-  document.getElementById('qp-new-card').style.display='block';
-  qpSavedPaymentMethodId=null;
-  if(!qpStripeCard){
-    try{
-      const elements=stripeInstance.elements({appearance:{theme:'night'},currency:'usd',loader:'never'});
-      qpStripeCard=elements.create('card',{
-        hidePostalCode:true,disableLink:true,
-        style:{base:{color:'#fff',fontSize:'14px',fontFamily:'"DM Sans",sans-serif','::placeholder':{color:'rgba(255,255,255,0.3)'}},invalid:{color:'#F05555'}}
-      });
-      qpStripeCard.mount('#qp-stripe-element');
-      qpStripeCard.on('change',e=>{document.getElementById('qp-stripe-error').textContent=e.error?e.error.message:'';});
-    }catch(e){console.log('Card element error:',e);}
-  }
-}
+let qpHasPaymentMethod = false;
+function showNewCardEntry(){ addPaymentMethod(); }
 function showQuickPost(){
   document.getElementById('quick-post-modal').style.display='flex';
-  setTimeout(async ()=>{
-    try{
-      if(!stripeInstance)stripeInstance=Stripe(document.querySelector('meta[name="stripe-pk"]')?.content||'');
-      const uid=currentUser?.userId||localStorage.getItem('detour_uid')||'';
-      // Check for saved payment method
-      const r=await fetch('/api/stripe/saved-card',{credentials:'include',headers:{'x-user-id':uid}});
-      const d=await r.json();
-      if(d.payment_method){
-        // Show saved card
-        qpSavedPaymentMethodId=d.payment_method.id;
-        const card=d.payment_method.card;
-        const icons={'visa':'💳','mastercard':'💳','amex':'💳','discover':'💳'};
-        document.getElementById('qp-card-icon').textContent=icons[card.brand]||'💳';
-        document.getElementById('qp-card-label').textContent=(card.brand.charAt(0).toUpperCase()+card.brand.slice(1))+' ····'+card.last4;
-        document.getElementById('qp-card-expiry').textContent='Expires '+card.exp_month+'/'+card.exp_year;
-        document.getElementById('qp-saved-card').style.display='flex';
-        document.getElementById('qp-new-card').style.display='none';
+  // Check for saved payment method
+  const uid=currentUser?.userId||localStorage.getItem('detour_uid')||'';
+  fetch('/api/stripe/payment-methods',{credentials:'include',headers:{'x-user-id':uid}})
+    .then(r=>r.json()).then(d=>{
+      const pm = d.payment_methods?.[0];
+      const statusEl = document.getElementById('qp-payment-status');
+      if(pm){
+        qpHasPaymentMethod=true;
+        const brand=pm.card.brand.charAt(0).toUpperCase()+pm.card.brand.slice(1);
+        statusEl.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--dark3);border:0.5px solid rgba(0,194,168,0.3);border-radius:var(--rs);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:18px;">💳</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#fff;">${brand} ····${pm.card.last4}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);">Expires ${pm.card.exp_month}/${pm.card.exp_year}</div>
+            </div>
+          </div>
+          <button onclick="addPaymentMethod()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,0.5);cursor:pointer;">Change</button>
+        </div>`;
       } else {
-        // No saved card — show entry form
-        document.getElementById('qp-saved-card').style.display='none';
-        document.getElementById('qp-new-card').style.display='block';
-        showNewCardEntry();
+        qpHasPaymentMethod=false;
+        statusEl.innerHTML=`<button onclick="addPaymentMethod()" style="width:100%;background:var(--dark3);border:1px dashed rgba(255,255,255,0.2);border-radius:var(--rs);padding:14px;font-size:14px;color:rgba(255,255,255,0.5);cursor:pointer;">+ Add Payment Method</button>`;
       }
-    }catch(e){
-      console.log('QP init error:',e);
-      document.getElementById('qp-new-card').style.display='block';
-      showNewCardEntry();
-    }
-  },100);
+    }).catch(()=>{
+      qpHasPaymentMethod=false;
+      document.getElementById('qp-payment-status').innerHTML=`<button onclick="addPaymentMethod()" style="width:100%;background:var(--dark3);border:1px dashed rgba(255,255,255,0.2);border-radius:var(--rs);padding:14px;font-size:14px;color:rgba(255,255,255,0.5);cursor:pointer;">+ Add Payment Method</button>`;
+    });
+}
+function addPaymentMethod(){
+  const uid=currentUser?.userId||localStorage.getItem('detour_uid')||'';
+  fetch('/api/stripe/add-payment-method',{method:'POST',credentials:'include',headers:{'x-user-id':uid,'Content-Type':'application/json'}})
+    .then(r=>r.json()).then(d=>{
+      if(d.url) window.location.href=d.url;
+      else toast('Could not open payment setup: '+d.error);
+    }).catch(e=>toast('Error: '+e.message));
 }
 function closeQuickPost(){document.getElementById('quick-post-modal').style.display='none';qpSetupClientSecret=null;}
 function updateQPBreakdown(){
@@ -1379,6 +1351,11 @@ async function submitQuickPost(){
   if(!to){errEl.textContent='Please enter a destination city';return;}
   if(!dropoffAddr){errEl.textContent='Please enter a dropoff address';return;}
   if(!price||parseFloat(price)<5){errEl.textContent='Minimum offer is $5';return;}
+  if(!qpHasPaymentMethod){
+    errEl.textContent='Please add a payment method first';
+    addPaymentMethod();
+    return;
+  }
   const submitBtn=document.querySelector('#quick-post-modal .btn-primary');
   if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Posting...';}
 
@@ -1395,36 +1372,13 @@ async function submitQuickPost(){
   fd.append('dropoff_zip',toZip);
   fd.append('item_size',size);
   fd.append('offered_price',price);
-  if(qpSavedPaymentMethodId) fd.append('payment_method_id', qpSavedPaymentMethodId);
 
   try{
     const res=await fetch('/api/jobs',{method:'POST',body:fd,credentials:'include',headers:{'x-user-id':currentUser?.userId||localStorage.getItem('detour_uid')||''}});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
-
-    // If using a new card, confirm with card element and optionally save it
-    if(data.client_secret && !qpSavedPaymentMethodId && qpStripeCard && stripeInstance){
-      if(submitBtn)submitBtn.textContent='Saving card...';
-      const saveCard=document.getElementById('qp-save-card')?.checked!==false;
-      const {paymentIntent, error:confirmError} = await stripeInstance.confirmCardPayment(
-        data.client_secret,
-        {
-          payment_method: {card: qpStripeCard},
-          setup_future_usage: saveCard ? 'off_session' : undefined
-        }
-      );
-      if(confirmError){
-        errEl.textContent=confirmError.message;
-        if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Delivery →';}
-        return;
-      }
-      console.log('Payment confirmed:', paymentIntent?.id, paymentIntent?.status);
-    }
-
     toast('Delivery posted! 🎉 Looking for a driver...');
     closeQuickPost();
-    qpStripeCard=null;
-    qpSavedPaymentMethodId=null;
     document.getElementById('qp-title').value='';
     document.getElementById('qp-pickup-addr').value='';
     document.getElementById('qp-dropoff-addr').value='';
@@ -1937,7 +1891,7 @@ async function checkAndShowConnectPrompt(){
     topPrompt.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:13px;color:var(--green);font-weight:600;">✓ Payout account connected</div><div style="font-size:12px;color:var(--gray);">Earnings deposited automatically</div></div><button class="btn-ghost" onclick="openStripeDashboard()">View earnings →</button></div>`;
   }
 }
-(function(){const params=new URLSearchParams(window.location.search);if(params.get('onboard')==='complete'){setTimeout(()=>toast("Payout account connected! You're ready to earn. 🎉"),800);window.history.replaceState({},'','/');}else if(params.get('onboard')==='error'){setTimeout(()=>toast('Something went wrong. Try connecting again.'),800);window.history.replaceState({},'','/');}})();
+(function(){const params=new URLSearchParams(window.location.search);if(params.get('onboard')==='complete'){setTimeout(()=>toast("Payout account connected! You're ready to earn. 🎉"),800);window.history.replaceState({},'','/app');}else if(params.get('onboard')==='error'){setTimeout(()=>toast('Something went wrong. Try connecting again.'),800);window.history.replaceState({},'','/app');}else if(params.get('payment_saved')==='1'){setTimeout(()=>toast('Payment method saved! ✓ You can now post deliveries.'),800);window.history.replaceState({},'','/app');}else if(params.get('payment_cancelled')==='1'){setTimeout(()=>toast('Payment setup cancelled.'),800);window.history.replaceState({},'','/app');}})();
 async function api(method,url,body){
   const headers={'Content-Type':'application/json'};
   const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid');
