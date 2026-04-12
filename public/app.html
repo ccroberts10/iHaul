@@ -411,7 +411,7 @@ textarea{resize:none}
           <div class="field-group">
             <div class="price-input-wrap">
               <span class="price-dollar">$</span>
-              <input type="number" id="job-price" placeholder="28.00" min="5" step="0.50" required oninput="updatePriceBreakdown()">
+              <input type="number" id="job-price" placeholder="28.00" min="5" step="1" required oninput="updatePriceBreakdown()">
             </div>
             <div class="price-suggestion" id="price-suggestion" style="display:none">Suggested: <span onclick="applyPriceSuggestion()"></span> based on route distance</div>
           </div>
@@ -670,7 +670,7 @@ textarea{resize:none}
       <label>Your offer to driver</label>
       <div class="price-input-wrap">
         <span class="price-dollar">$</span>
-        <input type="number" id="qp-price" placeholder="35" min="5" step="5" oninput="updateQPBreakdown()">
+        <input type="number" id="qp-price" placeholder="35" min="5" step="1" oninput="updateQPBreakdown()">
       </div>
       <div id="qp-breakdown" style="display:none;font-size:12px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
     </div>
