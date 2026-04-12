@@ -145,43 +145,17 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
 
   let paymentIntentId = null;
   let stripeError = null;
-  // Create and confirm Stripe PaymentIntent — holds funds until driver accepts
+  // Create Stripe PaymentIntent — authorize hold, confirm when driver accepts
   if (process.env.STRIPE_SECRET_KEY && req.body.payment_method_id) {
     try {
-      const userId = req.session.userId;
-      const user = db.prepare('SELECT email, stripe_customer_id FROM users WHERE id = ?').get(userId);
-
-      // Step 1: Get or create Stripe Customer
-      let customerId = user?.stripe_customer_id;
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user?.email,
-          metadata: { detour_user_id: userId }
-        });
-        customerId = customer.id;
-        db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, userId);
-        console.log('Created Stripe customer:', customerId);
-      }
-
-      // Step 2: Attach payment method to customer
-      try {
-        await stripe.paymentMethods.attach(req.body.payment_method_id, { customer: customerId });
-      } catch(attachErr) {
-        if (!attachErr.message.includes('already been attached')) {
-          throw attachErr;
-        }
-      }
-
-      // Step 3: Create and confirm PaymentIntent with manual capture
       const piPromise = stripe.paymentIntents.create({
         amount: Math.round(price * 100),
         currency: 'usd',
         capture_method: 'manual',
-        customer: customerId,
         payment_method: req.body.payment_method_id,
         confirm: true,
         return_url: 'https://detourdeliver.com/app',
-        metadata: { job_id: id, shipper_id: userId, job_type: jobType }
+        metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
       });
       const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout after 8s')), 8000));
       const pi = await Promise.race([piPromise, timeoutPromise]);
