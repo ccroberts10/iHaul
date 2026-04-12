@@ -88,6 +88,34 @@ app.get('/api/debug/db', (req, res) => {
 app.get('/api/debug/version', (req, res) => {
   res.json({ version: 'v3-stripe-customer', timestamp: new Date().toISOString() });
 });
+// Test Stripe payment intent — exposes exact error
+app.post('/api/debug/stripe-test', async (req, res) => {
+  const userId = req.session.userId || req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ error: 'Login required' });
+  const { payment_method_id } = req.body;
+  if (!payment_method_id) return res.status(400).json({ error: 'payment_method_id required' });
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  const user = db.prepare('SELECT email, stripe_customer_id FROM users WHERE id = ?').get(userId);
+  let customerId = user?.stripe_customer_id;
+  try {
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: user?.email, metadata: { detour_user_id: userId } });
+      customerId = customer.id;
+      db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, userId);
+    }
+    try { await stripe.paymentMethods.attach(payment_method_id, { customer: customerId }); }
+    catch(e) { if (!e.message.includes('already been attached')) return res.json({ step: 'attach_failed', error: e.message, code: e.code }); }
+    const pi = await stripe.paymentIntents.create({
+      amount: 500, currency: 'usd', capture_method: 'manual',
+      customer: customerId, payment_method: payment_method_id,
+      confirm: true, return_url: 'https://detourdeliver.com/app'
+    });
+    return res.json({ step: 'success', pi_id: pi.id, status: pi.status, customer: customerId });
+  } catch(e) {
+    return res.json({ step: 'failed', error: e.message, code: e.code, type: e.type, param: e.param, decline_code: e.raw?.decline_code });
+  }
+});
+
 app.get('/api/debug/geocode', async (req, res) => {
   try {
     const { geocode } = require('./utils/matching');
