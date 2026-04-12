@@ -90,12 +90,13 @@ app.get('/api/debug/version', (req, res) => {
 });
 // Retry a missed transfer for a completed job
 app.get('/api/debug/retry-transfer', async (req, res) => {
-  const userId = req.session.userId || req.headers['x-user-id'];
+  const userId = req.session.userId || req.headers['x-user-id'] || req.query.uid;
   if (!userId) return res.json({ error: 'Login required' });
   const jobId = req.query.job;
   if (!jobId) return res.json({ error: 'job param required' });
   try {
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const db = require('./db/schema');
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
     if (!job) return res.json({ error: 'Job not found' });
     if (job.stripe_transfer_id) return res.json({ error: 'Transfer already done', transfer_id: job.stripe_transfer_id });
