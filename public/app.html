@@ -629,7 +629,7 @@ textarea{resize:none}
       <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:4px;">YOUR DRIVER IS ON THE WAY</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">Check your messages to coordinate pickup details.</div>
     </div>
-    <button onclick="document.getElementById('accepted-modal').style.display='none';showView('view-home');loadMyJobs();" style="background:var(--teal);color:#000;border:none;border-radius:50px;padding:14px 32px;font-size:15px;font-weight:700;width:100%;cursor:pointer;">View My Jobs →</button>
+    <button onclick="goToAcceptedJob()" style="background:var(--teal);color:#000;border:none;border-radius:50px;padding:14px 32px;font-size:15px;font-weight:700;width:100%;cursor:pointer;">💬 Open Chat with Driver →</button>
     <div style="font-size:12px;color:rgba(255,255,255,0.25);margin-top:14px;">Tap anywhere to dismiss</div>
   </div>
 </div>
@@ -1039,16 +1039,20 @@ async function loadMyJobs(){
   try{
     const data=await api('GET','/api/jobs/my/all');
     const all=[...(data.as_shipper||[]),...(data.as_driver||[])];
-    // Remove duplicates (same job as both shipper and driver edge case)
     const seen=new Set();
     const unique=all.filter(j=>{if(seen.has(j.id))return false;seen.add(j.id);return true;});
-    // Apply filter
+    // Show persistent banner for any accepted jobs as shipper
+    const acceptedAsShipper=(data.as_shipper||[]).find(j=>j.status==='accepted');
+    const existing=document.getElementById('active-job-banner');
+    if(existing)existing.remove();
+    if(acceptedAsShipper){
+      showActiveJobBanner(acceptedAsShipper, acceptedAsShipper.driver_name||'Your driver');
+    }
     const filtered=currentFilter==='all'?unique:unique.filter(j=>j.status===currentFilter);
     if(!filtered.length){
       const msg=currentFilter==='all'?'No active jobs yet.\nPost a delivery or find a drive!':'No '+currentFilter.replace('_',' ')+' jobs.';
       list.innerHTML=`<div class="empty-state">${msg}</div>`;return;
     }
-    // Sort — most recent first, active before completed
     filtered.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
     list.innerHTML=filtered.map(j=>jobCard(j)).join('');
   }catch(e){list.innerHTML='<div class="empty-state">Could not load jobs</div>';}
@@ -1166,7 +1170,20 @@ async function postJob(){
     const res=await fetch('/api/jobs',{method:'POST',body:fd,credentials:'include'});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed to post job');
-    toast('Delivery posted! Looking for a driver match. 🎉');
+    // Confirm payment from browser context if client_secret returned
+    if(data.client_secret && stripeCard && stripeInstance){
+      const {error:confirmError}=await stripeInstance.confirmCardPayment(data.client_secret,{
+        payment_method:{card:stripeCard}
+      });
+      if(confirmError){
+        console.error('Confirm error:',confirmError.message);
+        toast('Job posted! Payment needs confirmation — '+confirmError.message);
+      } else {
+        toast('Delivery posted! Looking for a driver match. 🎉');
+      }
+    } else {
+      toast('Delivery posted! Looking for a driver match. 🎉');
+    }
     document.getElementById('post-form').reset();
     document.getElementById('price-breakdown').style.display='none';
     document.getElementById('marketplace-fields').style.display='none';
@@ -1346,10 +1363,26 @@ async function submitQuickPost(){
     const res=await fetch('/api/jobs',{method:'POST',body:fd,credentials:'include',headers:{'x-user-id':currentUser?.userId||localStorage.getItem('detour_uid')||''}});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
+
+    // If we have a client_secret, confirm the payment from the browser
+    // This keeps the card confirmation in the platform's context, not connected account
+    if(data.client_secret && qpStripeCard && stripeInstance){
+      const {error: confirmError} = await stripeInstance.confirmCardPayment(data.client_secret, {
+        payment_method: {card: qpStripeCard}
+      });
+      if(confirmError){
+        console.error('Card confirm error:', confirmError.message);
+        // Job is posted but payment failed — show warning
+        toast('Job posted but payment could not be confirmed: '+confirmError.message);
+      } else {
+        toast('Delivery posted! 🎉 Looking for a driver...');
+      }
+    } else {
+      toast('Delivery posted! 🎉 Looking for a driver...');
+    }
+
     closeQuickPost();
-    // Reset card for next use
     qpStripeCard=null;
-    toast('Delivery posted! 🎉 Looking for a driver...');
     document.getElementById('qp-title').value='';
     document.getElementById('qp-pickup-addr').value='';
     document.getElementById('qp-dropoff-addr').value='';
@@ -1576,7 +1609,20 @@ function fireConfetti(){
   draw();
 }
 
+let currentAcceptedJobId = null;
+
+function goToAcceptedJob(){
+  document.getElementById('accepted-modal').style.display='none';
+  if(currentAcceptedJobId){
+    openJob(currentAcceptedJobId, 'shipper');
+  } else {
+    showView('view-home');
+    loadMyJobs();
+  }
+}
+
 function showDriverAcceptedCelebration(job, driverName){
+  currentAcceptedJobId = job.id;
   const modal=document.getElementById('accepted-modal');
   const nameEl=document.getElementById('accepted-driver-name');
   const titleEl=document.getElementById('accepted-job-title');
@@ -1585,10 +1631,29 @@ function showDriverAcceptedCelebration(job, driverName){
   if(titleEl)titleEl.textContent=job.title+' · '+job.pickup_city+' → '+job.dropoff_city;
   modal.style.display='flex';
   fireConfetti();
-  // Also fire browser notification if app is in background
   showPushNotification('🎉 Driver found!', driverName+' accepted your delivery — '+job.title);
-  // Vibrate if supported
   if(navigator.vibrate)navigator.vibrate([100,50,100,50,200]);
+  // Show persistent banner on home screen
+  showActiveJobBanner(job, driverName);
+}
+
+function showActiveJobBanner(job, driverName){
+  const existing = document.getElementById('active-job-banner');
+  if(existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'active-job-banner';
+  banner.style.cssText = 'background:linear-gradient(135deg,rgba(0,194,168,0.15),rgba(61,204,120,0.1));border:1px solid rgba(0,194,168,0.4);border-radius:var(--rs);padding:14px 16px;margin-bottom:16px;cursor:pointer;';
+  banner.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-bottom:4px;">🚗 Active Delivery</div>
+      <div style="font-size:14px;font-weight:600;color:#fff;">${escHtml(job.title)}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px;">Driver: ${escHtml(driverName)}</div>
+    </div>
+    <div style="background:var(--teal);color:#000;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;">💬 Chat →</div>
+  </div>`;
+  banner.onclick = () => openJob(job.id, 'shipper');
+  const homeSection = document.getElementById('my-jobs-list');
+  if(homeSection) homeSection.parentNode.insertBefore(banner, homeSection);
 }
 
 // Track job statuses for accepted detection
