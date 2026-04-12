@@ -155,7 +155,7 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
           amount: Math.round(price * 100),
           currency: 'usd',
           capture_method: 'manual',
-          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+          payment_method_types: ['card'],
           metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
         }),
         new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout')), 10000))
