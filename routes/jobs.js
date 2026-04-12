@@ -143,41 +143,10 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
     pickup_zip: pickup_zip || null, dropoff_zip: dropoff_zip || null
   });
 
+  // Payment handled via SetupIntent before job post — charge fires on driver accept
   let paymentIntentId = null;
   let clientSecret = null;
   let stripeError = null;
-  let stripeCustomerId = null;
-
-  if (process.env.STRIPE_SECRET_KEY) {
-    try {
-      const userId = req.session.userId;
-      const user = db.prepare('SELECT email, stripe_customer_id FROM users WHERE id = ?').get(userId);
-
-      // Get or create Stripe customer on platform account
-      let customerId = user?.stripe_customer_id;
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user?.email,
-          metadata: { detour_user_id: userId }
-        });
-        customerId = customer.id;
-        db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, userId);
-      }
-      stripeCustomerId = customerId;
-
-      // Create SetupIntent to save card — actual charge happens when driver accepts
-      const si = await stripe.setupIntents.create({
-        customer: customerId,
-        usage: 'off_session',
-        metadata: { job_id: id, shipper_id: userId }
-      });
-      clientSecret = si.client_secret;
-      console.log('SetupIntent created:', si.id, 'customer:', customerId);
-    } catch(e) {
-      stripeError = { message: e.message, code: e.code, type: e.type };
-      console.error('Stripe SetupIntent error:', e.message);
-    }
-  }
 
   db.prepare(`INSERT INTO jobs (id, shipper_id, job_type, title, description, item_size, item_weight,
     fragile, needs_disassembly, pickup_address, pickup_city, dropoff_address, dropoff_city,
