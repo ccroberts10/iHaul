@@ -148,9 +148,6 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
 
   if (process.env.STRIPE_SECRET_KEY && req.body.payment_method_id) {
     try {
-      // Create and immediately confirm PaymentIntent
-      // Use application_fee_amount so platform keeps its cut automatically
-      // Funds go directly to destination — no balance transfer needed
       const pi = await Promise.race([
         stripe.paymentIntents.create({
           amount: Math.round(price * 100),
