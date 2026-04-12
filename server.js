@@ -108,14 +108,15 @@ app.get('/api/debug/retry-transfer', async (req, res) => {
     // Get charge from PI
     const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
     const chargeId = pi.latest_charge;
+    if (!chargeId) return res.json({ error: 'No charge on PI', pi_status: pi.status, pi_id: pi.id });
     const transferParams = {
       amount: Math.round(job.driver_payout * 100),
       currency: 'usd',
       destination: driver.stripe_connect_id,
+      source_transaction: chargeId,
       metadata: { job_id: job.id }
     };
-    if (chargeId) transferParams.source_transaction = chargeId;
-    const t = await stripe.transfers.create(transferParams);
+    return res.json({ debug: true, chargeId, pi_status: pi.status, amount: job.driver_payout, destination: driver.stripe_connect_id });
     db.prepare('UPDATE users SET stripe_connect_verified = 1 WHERE id = ?').run(job.driver_id);
     db.prepare("UPDATE jobs SET stripe_transfer_id = ? WHERE id = ?").run(t.id, job.id);
     res.json({ success: true, transfer_id: t.id, amount: job.driver_payout, connect_account: driver.stripe_connect_id });
