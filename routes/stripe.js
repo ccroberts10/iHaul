@@ -179,7 +179,65 @@ router.post('/webhook', express.raw({ type: 'application/json' }), (req, res) =>
   res.json({ received: true });
 });
 
-// ─── SHIPPER PAYMENT INTENT ───────────────────────────────────────────────────
+// ─── SAVE PAYMENT METHOD via Stripe Checkout ─────────────────────────────────
+// Creates a Stripe Checkout session in setup mode — user adds card on Stripe's hosted page
+router.post('/add-payment-method', requireAuth, async (req, res) => {
+  try {
+    const user = db.prepare('SELECT email, stripe_customer_id FROM users WHERE id = ?').get(req.session.userId);
+    const appUrl = process.env.APP_URL || 'https://detourdeliver.com';
+
+    // Get or create Stripe customer
+    let customerId = user?.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user?.email,
+        metadata: { detour_user_id: req.session.userId }
+      });
+      customerId = customer.id;
+      db.prepare('UPDATE users SET stripe_customer_id = ? WHERE id = ?').run(customerId, req.session.userId);
+    }
+
+    // Create Checkout session in setup mode — saves card without charging
+    const session = await stripe.checkout.sessions.create({
+      mode: 'setup',
+      customer: customerId,
+      currency: 'usd',
+      payment_method_types: ['card'],
+      success_url: `${appUrl}/app?payment_saved=1`,
+      cancel_url: `${appUrl}/app?payment_cancelled=1`,
+      metadata: { detour_user_id: req.session.userId }
+    });
+
+    res.json({ url: session.url });
+  } catch(e) {
+    console.error('Add payment method error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── GET SAVED PAYMENT METHODS ───────────────────────────────────────────────
+router.get('/payment-methods', requireAuth, async (req, res) => {
+  try {
+    const user = db.prepare('SELECT stripe_customer_id FROM users WHERE id = ?').get(req.session.userId);
+    if (!user?.stripe_customer_id) return res.json({ payment_methods: [] });
+    const pms = await stripe.paymentMethods.list({ customer: user.stripe_customer_id, type: 'card', limit: 5 });
+    res.json({ payment_methods: pms.data });
+  } catch(e) {
+    res.json({ payment_methods: [] });
+  }
+});
+
+// ─── DELETE SAVED PAYMENT METHOD ─────────────────────────────────────────────
+router.delete('/payment-methods/:id', requireAuth, async (req, res) => {
+  try {
+    await stripe.paymentMethods.detach(req.params.id);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // Creates a PaymentIntent for shipper to pay — called from frontend before posting
 router.post('/create-payment-intent', requireAuth, async (req, res) => {
   const { amount } = req.body;
