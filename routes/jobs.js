@@ -372,12 +372,18 @@ router.post('/:id/confirm', requireAuth, upload.array('photos', 6), async (req, 
     try {
       const driver = db.prepare('SELECT stripe_connect_id FROM users WHERE id = ?').get(job.driver_id);
       if (driver?.stripe_connect_id) {
-        const t = await stripe.transfers.create({
+        // Get the charge ID from the PaymentIntent to use as source_transaction
+        const pi = await stripe.paymentIntents.retrieve(job.stripe_payment_intent_id);
+        const chargeId = pi.latest_charge;
+        const transferParams = {
           amount: Math.round(job.driver_payout * 100),
           currency: 'usd',
           destination: driver.stripe_connect_id,
           metadata: { job_id: job.id }
-        });
+        };
+        // Use source_transaction if we have a charge — ensures funds are available
+        if (chargeId) transferParams.source_transaction = chargeId;
+        const t = await stripe.transfers.create(transferParams);
         transferId = t.id;
         console.log('Driver payout transferred:', transferId, 'amount:', job.driver_payout);
       } else {
