@@ -144,26 +144,25 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   });
 
   let paymentIntentId = null;
+  let clientSecret = null;
   let stripeError = null;
-  // Create Stripe PaymentIntent — authorize hold, confirm when driver accepts
+  // Create Stripe PaymentIntent — return client_secret to frontend to confirm with card
   if (process.env.STRIPE_SECRET_KEY && req.body.payment_method_id) {
     try {
       const piPromise = stripe.paymentIntents.create({
         amount: Math.round(price * 100),
         currency: 'usd',
         capture_method: 'manual',
-        payment_method: req.body.payment_method_id,
-        confirm: true,
-        return_url: 'https://detourdeliver.com/app',
         metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
       });
       const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout after 8s')), 8000));
       const pi = await Promise.race([piPromise, timeoutPromise]);
       paymentIntentId = pi.id;
+      clientSecret = pi.client_secret;
       console.log('PaymentIntent created:', pi.id, 'status:', pi.status);
     } catch (e) {
-      stripeError = { message: e.message, code: e.code, type: e.type, param: e.param };
-      console.error('Stripe error:', e.message, '| code:', e.code, '| type:', e.type);
+      stripeError = { message: e.message, code: e.code, type: e.type };
+      console.error('Stripe error:', e.message);
     }
   }
 
@@ -216,7 +215,7 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
     }
   });
 
-  res.json({ success: true, job, stripe_error: stripeError });
+  res.json({ success: true, job, client_secret: clientSecret, stripe_error: stripeError });
 });
 
 router.get('/', (req, res) => {
