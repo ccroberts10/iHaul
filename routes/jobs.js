@@ -143,10 +143,31 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
     pickup_zip: pickup_zip || null, dropoff_zip: dropoff_zip || null
   });
 
-  // Payment handled via SetupIntent before job post — charge fires on driver accept
+  // Payment handled server-side — create PI, browser confirms with card element
   let paymentIntentId = null;
   let clientSecret = null;
   let stripeError = null;
+
+  if (process.env.STRIPE_SECRET_KEY) {
+    try {
+      const pi = await Promise.race([
+        stripe.paymentIntents.create({
+          amount: Math.round(price * 100),
+          currency: 'usd',
+          capture_method: 'manual',
+          automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+          metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
+        }),
+        new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout')), 10000))
+      ]);
+      paymentIntentId = pi.id;
+      clientSecret = pi.client_secret;
+      console.log('PI created:', pi.id, 'status:', pi.status);
+    } catch(e) {
+      stripeError = { message: e.message, code: e.code, type: e.type };
+      console.error('Stripe PI error:', e.message, e.code);
+    }
+  }
 
   db.prepare(`INSERT INTO jobs (id, shipper_id, job_type, title, description, item_size, item_weight,
     fragile, needs_disassembly, pickup_address, pickup_city, dropoff_address, dropoff_city,
