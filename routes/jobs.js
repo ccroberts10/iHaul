@@ -155,7 +155,6 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
           capture_method: 'manual',
           payment_method: req.body.payment_method_id,
           confirm: true,
-          return_url: 'https://detourdeliver.com/app',
           metadata: { job_id: id, shipper_id: req.session.userId, job_type: jobType }
         }),
         new Promise((_,reject) => setTimeout(()=>reject(new Error('Stripe timeout')), 10000))
