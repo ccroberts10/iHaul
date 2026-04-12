@@ -1352,20 +1352,23 @@ async function submitQuickPost(){
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
 
-    // Confirm payment using card element with client_secret from server
+    // Confirm payment BEFORE closing modal — card element must still be mounted
     if(data.client_secret && qpStripeCard && stripeInstance){
       if(submitBtn)submitBtn.textContent='Confirming payment...';
-      const {paymentIntent, error:confirmError} = await stripeInstance.confirmCardPayment(
-        data.client_secret,
-        {payment_method: {card: qpStripeCard}}
-      );
-      if(confirmError){
-        console.error('Payment confirm error:', confirmError.message);
-      } else {
-        console.log('Payment confirmed:', paymentIntent?.id, paymentIntent?.status);
-      }
+      try{
+        const {paymentIntent, error:confirmError} = await stripeInstance.confirmCardPayment(
+          data.client_secret,
+          {payment_method: {card: qpStripeCard}}
+        );
+        if(confirmError){
+          console.error('Payment confirm error:', confirmError.message, confirmError.code);
+        } else {
+          console.log('Payment confirmed:', paymentIntent?.id, paymentIntent?.status);
+        }
+      }catch(ce){console.log('Confirm exception:', ce.message);}
     }
 
+    // Only close modal AFTER payment confirmed
     toast('Delivery posted! 🎉 Looking for a driver...');
     closeQuickPost();
     qpStripeCard=null;
