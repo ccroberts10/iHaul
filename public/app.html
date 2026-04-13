@@ -164,12 +164,15 @@ textarea{resize:none}
 .gig-cat-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px}
 .gig-cat-sub{font-size:12px;color:rgba(255,255,255,0.45);line-height:1.4}
 .gig-cat-earn{font-size:12px;color:var(--green);font-weight:600;margin-top:4px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--dark);border-top:0.5px solid rgba(255,255,255,0.07);display:flex;flex-direction:row;padding:8px 0 20px;z-index:50}
 .nav-item{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0;opacity:0.35;transition:opacity 0.2s}
 .nav-item.active{opacity:1}
 .filter-btn{padding:6px 14px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:0.5px solid rgba(255,255,255,0.1);background:transparent;color:rgba(255,255,255,0.4);transition:all 0.2s}
 .filter-btn.active{background:rgba(0,194,168,0.12);border-color:var(--teal);color:var(--teal)}
 .nav-icon{font-size:19px}
 .nav-label{font-size:9px;color:var(--white);font-family:'DM Sans',sans-serif;letter-spacing:0.03em}
+.nav-item svg{color:var(--white);stroke:currentColor}
+.nav-item.active svg{color:var(--teal);stroke:var(--teal)}
 .empty-state{text-align:center;color:var(--gray);font-size:14px;padding:36px 20px;line-height:1.6}
 .error-msg{color:var(--red);font-size:13px;min-height:16px;margin-bottom:4px}
 .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--dark3);border:0.5px solid rgba(255,255,255,0.12);color:var(--white);padding:11px 18px;border-radius:30px;font-size:13px;opacity:0;transition:all 0.28s;pointer-events:none;white-space:nowrap;z-index:200;max-width:90vw;text-align:center}
@@ -819,10 +822,22 @@ textarea{resize:none}
 
   </div>
   <div class="bottom-nav">
-    <button class="nav-item active" onclick="showView('view-home');setNavActive(this)"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-    <button class="nav-item" onclick="showView('view-post');setNavActive(this)"><span class="nav-icon">📦</span><span class="nav-label">Send</span></button>
-    <button class="nav-item" onclick="showView('view-gigs');setNavActive(this)"><span class="nav-icon">💼</span><span class="nav-label">Gigs</span></button>
-    <button class="nav-item" onclick="showView('view-jobs');loadMyJobs();setNavActive(this)"><span class="nav-icon">📋</span><span class="nav-label">My Jobs</span></button>
+    <button class="nav-item active" onclick="showView('view-home');setNavActive(this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="showView('view-post');setNavActive(this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <span class="nav-label">Send</span>
+    </button>
+    <button class="nav-item" onclick="showView('view-gigs');setNavActive(this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      <span class="nav-label">Gigs</span>
+    </button>
+    <button class="nav-item" onclick="showView('view-jobs');loadMyJobs();setNavActive(this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="nav-label">My Jobs</span>
+    </button>
   </div>
 </div>
 
@@ -1092,7 +1107,8 @@ function enterApp(name){
   document.getElementById('auth-screen').classList.remove('active');
   document.getElementById('app-screen').classList.add('active');
   document.getElementById('header-name').textContent=name;
-  document.getElementById('home-name').textContent=name.split(' ')[0];
+  const firstName = name.split(' ')[0];
+  document.getElementById('home-name').textContent = firstName.charAt(0).toUpperCase() + firstName.slice(1);
   const soon=new Date(Date.now()+3600000);
   const local=new Date(soon.getTime()-soon.getTimezoneOffset()*60000).toISOString().slice(0,16);
   const d=document.getElementById('route-depart');if(d)d.value=local;
