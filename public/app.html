@@ -290,10 +290,10 @@ textarea{resize:none}
     <div id="view-home" class="view active">
       <div class="home-hero">
         <div class="home-greeting">Hey, <span id="home-name"></span> 👋</div>
-        <div class="home-sub">What do you need today?</div>
+        <div class="home-sub">Deliveries, yard work, moving & more</div>
       </div>
       <!-- Quick Post Button -->
-      <button class="quick-post-btn" onclick="showQuickPost()">⚡ Quick Post a Delivery</button>
+      <button class="quick-post-btn" onclick="showQuickPost()">⚡ Quick Post a Job</button>
       <div class="action-grid">
         <div class="action-card shipper-card" onclick="showView('view-post')">
           <div class="action-icon">📦</div>
@@ -332,11 +332,14 @@ textarea{resize:none}
       <div class="form-section">
         <div class="form-section-title">What type of delivery?</div>
         <div class="type-picker">
-          <div class="type-opt active" data-type="standard" onclick="selectJobType('standard',this)"><span class="type-emoji">📦</span><span class="type-name">General</span></div>
+          <div class="type-opt active" data-type="standard" onclick="selectJobType('standard',this)"><span class="type-emoji">📦</span><span class="type-name">Delivery</span></div>
           <div class="type-opt" data-type="marketplace" onclick="selectJobType('marketplace',this)"><span class="type-emoji">🛋️</span><span class="type-name">Marketplace</span></div>
-          <div class="type-opt" data-type="retail" onclick="selectJobType('retail',this)"><span class="type-emoji">🚴</span><span class="type-name">Retail</span></div>
           <div class="type-opt" data-type="errand" onclick="selectJobType('errand',this)"><span class="type-emoji">🛍️</span><span class="type-name">Errand</span></div>
-          <div class="type-opt" data-type="business" onclick="selectJobType('business',this)"><span class="type-emoji">🏢</span><span class="type-name">Business</span></div>
+          <div class="type-opt" data-type="yard_work" onclick="selectJobType('yard_work',this)"><span class="type-emoji">🌿</span><span class="type-name">Yard Work</span></div>
+          <div class="type-opt" data-type="labor" onclick="selectJobType('labor',this)"><span class="type-emoji">💪</span><span class="type-name">Labor</span></div>
+          <div class="type-opt" data-type="dump_run" onclick="selectJobType('dump_run',this)"><span class="type-emoji">🚛</span><span class="type-name">Dump Run</span></div>
+          <div class="type-opt" data-type="cleaning" onclick="selectJobType('cleaning',this)"><span class="type-emoji">🧹</span><span class="type-name">Cleaning</span></div>
+          <div class="type-opt" data-type="handyman" onclick="selectJobType('handyman',this)"><span class="type-emoji">🔧</span><span class="type-name">Handyman</span></div>
         </div>
         <div id="type-hint" class="type-hint">Standard delivery between two locations.</div>
       </div>
@@ -359,6 +362,71 @@ textarea{resize:none}
           <div class="form-section-title">Errand Details</div>
           <div class="field-group"><label>Store / Location</label><input type="text" id="store-name" placeholder="Home Depot, Costco, DBP..."></div>
           <div class="field-group"><label>What to pick up</label><textarea id="item-to-pickup" rows="2" placeholder="2x 8ft 2x4 lumber, receipt #12345..."></textarea></div>
+        </div>
+
+        <!-- SERVICE JOB FIELDS -->
+        <div id="service-fields" class="form-section" style="display:none">
+          <div class="form-section-title" id="service-fields-title">Service Details</div>
+
+          <!-- Handyman disclaimer -->
+          <div id="full-handyman-warning" style="display:none;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.3);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:#ffb400;margin-bottom:6px;">⚠️ Handyman Jobs — Minor Work Only</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6;">
+              No electrical panel work, plumbing behind walls, gas lines, structural work, HVAC installation, or anything requiring a permit. Licensed trade work must be done by a licensed contractor.
+              <div style="margin-top:8px;">
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="full-handyman-agree" style="margin-top:2px;accent-color:var(--teal);flex-shrink:0;">
+                  <span>I confirm this job does not involve licensed trade work.</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="field-group"><label>Job Title <span class="req">*</span></label><input type="text" id="service-title" placeholder="e.g. Mow front lawn, Move 2-bedroom apt, Deep clean house"></div>
+          <div class="field-group"><label>Description <span class="req">*</span></label><textarea id="service-desc" rows="3" placeholder="Describe exactly what needs to be done, any special requirements, access instructions..."></textarea></div>
+          <div class="field-group"><label>Location Address <span class="req">*</span></label>
+            <div class="autocomplete-wrap">
+              <input type="text" id="service-addr" placeholder="Where is the work?" autocomplete="off" oninput="addressAutocomplete(this,'service-addr-ac','service-zip','service-city','service-state')">
+              <div id="service-addr-ac" class="autocomplete-list" style="display:none"></div>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label>City</label><input type="text" id="service-city" placeholder="Durango" value="Durango"></div>
+            <div class="field-group"><label>State</label><input type="text" id="service-state" placeholder="CO" maxlength="2" style="text-transform:uppercase;" value="CO"></div>
+            <div class="field-group"><label>Zip</label><input type="text" id="service-zip" placeholder="81301" maxlength="5" inputmode="numeric"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-group"><label>Est. Duration</label>
+              <select id="service-duration">
+                <option value="">Not sure</option>
+                <option value="1h">~1 hour</option>
+                <option value="2h">~2 hours</option>
+                <option value="3h">~3 hours</option>
+                <option value="4h">Half day (4hrs)</option>
+                <option value="8h">Full day (8hrs)</option>
+                <option value="multi">Multiple days</option>
+              </select>
+            </div>
+            <div class="field-group"><label>When needed</label>
+              <select id="service-urgency">
+                <option value="flexible">Flexible</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="this_week">This week</option>
+                <option value="this_weekend">This weekend</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group"><label>Your Offer <span class="req">*</span></label>
+            <div class="price-input-wrap">
+              <span class="price-currency">$</span>
+              <input type="number" id="service-price" placeholder="75" min="10" step="5" oninput="updateServiceBreakdown()">
+            </div>
+            <div id="service-breakdown" style="display:none;margin-top:8px;background:var(--dark2);border-radius:8px;padding:10px 12px;">
+              <div class="price-row"><span>Helper earns</span><span id="sb-payout" class="price-val" style="color:var(--green)"></span></div>
+              <div class="price-row"><span>Detour fee (20%)</span><span id="sb-fee" class="price-val muted"></span></div>
+            </div>
+          </div>
+          <div class="field-group"><label>Notes for helper</label><textarea id="service-notes" rows="2" placeholder="Gate code, park on street, bring own tools..."></textarea></div>
         </div>
         <div class="form-section">
           <div class="form-section-title">Item Details</div>
@@ -424,8 +492,10 @@ textarea{resize:none}
         </div>
         <div class="form-section" style="margin-top:8px;">
           <div class="form-section-title">Payment Method</div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:12px;">Your card is held securely by Stripe and only charged when a driver accepts your job.</div>
-          <div id="stripe-card-element" style="background:var(--dark2);border:0.5px solid rgba(255,255,255,0.1);border-radius:var(--rs);padding:12px 14px;"></div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:12px;">Your card is charged when a driver accepts your job.</div>
+          <div id="post-payment-status">
+            <div style="color:rgba(255,255,255,0.3);font-size:13px;">Loading...</div>
+          </div>
           <div id="stripe-card-error" class="error-msg" style="margin-top:8px;"></div>
         </div>
         <div id="post-error" class="error-msg" style="font-size:14px;padding:10px 0;"></div>
@@ -536,6 +606,15 @@ textarea{resize:none}
             <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:10px;line-height:1.5;">Documents are reviewed by Detour staff and never shared publicly. Both documents required before accepting jobs.</div>
           </div>
         </div>
+
+        <!-- PAYMENT METHOD SECTION -->
+        <div class="form-section" style="margin-top:16px;">
+          <div class="form-section-title">💳 Payment Method for Deliveries</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:12px;">Your saved card is charged when a driver accepts your job. Managed securely by Stripe.</div>
+          <div id="profile-payment-status">
+            <div style="color:rgba(255,255,255,0.3);font-size:13px;">Loading...</div>
+          </div>
+        </div>
       </div>
       <div id="drive-browse-panel" style="display:none">
 
@@ -637,62 +716,141 @@ textarea{resize:none}
   <div class="modal-sheet">
     <div class="modal-sheet-handle"></div>
     <div class="modal-sheet-title">⚡ Quick Post</div>
-    <div class="field-group"><label>What needs delivering? <span class="req">*</span></label><input type="text" id="qp-title" placeholder="e.g. Sofa, Coffee beans, Bike..."></div>
-    <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">📍 Pickup Location</div>
-      <div class="field-group" style="margin-bottom:8px;">
-        <div class="autocomplete-wrap">
-          <input type="text" id="qp-pickup-addr" placeholder="Start typing — Walmart, Hospital..." style="font-size:14px;" autocomplete="off" oninput="addressAutocomplete(this,'qp-pickup-ac','qp-from-zip','qp-from','qp-from-state')">
-          <div id="qp-pickup-ac" class="autocomplete-list" style="display:none"></div>
+
+    <!-- CATEGORY SELECTOR -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Category</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="qp-category-grid">
+        <div class="qp-cat active" data-cat="delivery" onclick="selectQPCategory('delivery',this)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:rgba(0,194,168,0.1);border:1px solid var(--teal);border-radius:var(--rs);cursor:pointer;">
+          <span style="font-size:20px;">📦</span><span style="font-size:11px;color:var(--teal);font-weight:600;">Delivery</span>
+        </div>
+        <div class="qp-cat" data-cat="yard_work" onclick="selectQPCategory('yard_work',this)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--dark2);border:1px solid rgba(255,255,255,0.08);border-radius:var(--rs);cursor:pointer;">
+          <span style="font-size:20px;">🌿</span><span style="font-size:11px;color:rgba(255,255,255,0.5);">Yard Work</span>
+        </div>
+        <div class="qp-cat" data-cat="labor" onclick="selectQPCategory('labor',this)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--dark2);border:1px solid rgba(255,255,255,0.08);border-radius:var(--rs);cursor:pointer;">
+          <span style="font-size:20px;">💪</span><span style="font-size:11px;color:rgba(255,255,255,0.5);">Labor</span>
+        </div>
+        <div class="qp-cat" data-cat="dump_run" onclick="selectQPCategory('dump_run',this)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--dark2);border:1px solid rgba(255,255,255,0.08);border-radius:var(--rs);cursor:pointer;">
+          <span style="font-size:20px;">🚛</span><span style="font-size:11px;color:rgba(255,255,255,0.5);">Dump Run</span>
+        </div>
+        <div class="qp-cat" data-cat="cleaning" onclick="selectQPCategory('cleaning',this)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--dark2);border:1px solid rgba(255,255,255,0.08);border-radius:var(--rs);cursor:pointer;">
+          <span style="font-size:20px;">🧹</span><span style="font-size:11px;color:rgba(255,255,255,0.5);">Cleaning</span>
+        </div>
+        <div class="qp-cat" data-cat="handyman" onclick="selectQPCategory('handyman',this)" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;background:var(--dark2);border:1px solid rgba(255,255,255,0.08);border-radius:var(--rs);cursor:pointer;">
+          <span style="font-size:20px;">🔧</span><span style="font-size:11px;color:rgba(255,255,255,0.5);">Handyman</span>
         </div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <div class="field-group" style="flex:2;margin:0;"><input type="text" id="qp-from" placeholder="City" value="Durango" style="font-size:14px;"></div>
-        <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-from-state" placeholder="State" value="CO" maxlength="2" style="font-size:14px;text-transform:uppercase;"></div>
-        <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-from-zip" placeholder="Zip" maxlength="5" style="font-size:14px;" inputmode="numeric"></div>
-      </div>
     </div>
-    <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
-      <div style="font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">🏁 Dropoff Location</div>
-      <div class="field-group" style="margin-bottom:8px;">
-        <div class="autocomplete-wrap">
-          <input type="text" id="qp-dropoff-addr" placeholder="Start typing — Walmart, Hospital..." style="font-size:14px;" autocomplete="off" oninput="addressAutocomplete(this,'qp-dropoff-ac','qp-to-zip','qp-to','qp-to-state')">
-          <div id="qp-dropoff-ac" class="autocomplete-list" style="display:none"></div>
+
+    <!-- DELIVERY FIELDS -->
+    <div id="qp-delivery-fields">
+      <div class="field-group"><label>What needs delivering? <span class="req">*</span></label><input type="text" id="qp-title" placeholder="e.g. Sofa, Coffee beans, Bike..."></div>
+      <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">📍 Pickup Location</div>
+        <div class="field-group" style="margin-bottom:8px;">
+          <div class="autocomplete-wrap">
+            <input type="text" id="qp-pickup-addr" placeholder="Start typing — Walmart, Hospital..." style="font-size:14px;" autocomplete="off" oninput="addressAutocomplete(this,'qp-pickup-ac','qp-from-zip','qp-from','qp-from-state')">
+            <div id="qp-pickup-ac" class="autocomplete-list" style="display:none"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="field-group" style="flex:2;margin:0;"><input type="text" id="qp-from" placeholder="City" value="Durango" style="font-size:14px;"></div>
+          <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-from-state" placeholder="State" value="CO" maxlength="2" style="font-size:14px;text-transform:uppercase;"></div>
+          <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-from-zip" placeholder="Zip" maxlength="5" style="font-size:14px;" inputmode="numeric"></div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <div class="field-group" style="flex:2;margin:0;"><input type="text" id="qp-to" placeholder="City" style="font-size:14px;"></div>
-        <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-to-state" placeholder="State" value="CO" maxlength="2" style="font-size:14px;text-transform:uppercase;"></div>
-        <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-to-zip" placeholder="Zip" maxlength="5" style="font-size:14px;" inputmode="numeric"></div>
+      <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">🏁 Dropoff Location</div>
+        <div class="field-group" style="margin-bottom:8px;">
+          <div class="autocomplete-wrap">
+            <input type="text" id="qp-dropoff-addr" placeholder="Start typing — Walmart, Hospital..." style="font-size:14px;" autocomplete="off" oninput="addressAutocomplete(this,'qp-dropoff-ac','qp-to-zip','qp-to','qp-to-state')">
+            <div id="qp-dropoff-ac" class="autocomplete-list" style="display:none"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="field-group" style="flex:2;margin:0;"><input type="text" id="qp-to" placeholder="City" style="font-size:14px;"></div>
+          <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-to-state" placeholder="State" value="CO" maxlength="2" style="font-size:14px;text-transform:uppercase;"></div>
+          <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-to-zip" placeholder="Zip" maxlength="5" style="font-size:14px;" inputmode="numeric"></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Your offer to driver</label>
+        <div class="price-input-wrap">
+          <span class="price-dollar">$</span>
+          <input type="number" id="qp-price" placeholder="35" min="5" step="1" oninput="updateQPBreakdown()">
+        </div>
+        <div id="qp-breakdown" style="display:none;font-size:12px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
+      </div>
+      <div class="field-group">
+        <label>Item Size</label>
+        <select id="qp-size">
+          <option value="small_box">Small Box</option>
+          <option value="medium_box">Medium Box</option>
+          <option value="large_box">Large Box</option>
+          <option value="envelope">Envelope / Doc</option>
+          <option value="oversized">Oversized / Furniture</option>
+        </select>
       </div>
     </div>
-    <div class="field-group">
-      <label>Your offer to driver</label>
-      <div class="price-input-wrap">
-        <span class="price-dollar">$</span>
-        <input type="number" id="qp-price" placeholder="35" min="5" step="1" oninput="updateQPBreakdown()">
+
+    <!-- SERVICE FIELDS -->
+    <div id="qp-service-fields" style="display:none">
+
+      <!-- HANDYMAN DISCLAIMER — shown only when handyman selected -->
+      <div id="qp-handyman-warning" style="display:none;background:rgba(255,180,0,0.08);border:1px solid rgba(255,180,0,0.3);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:#ffb400;margin-bottom:6px;">⚠️ Handyman Jobs — Minor Work Only</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6;">
+          Detour handyman jobs are for <strong style="color:#fff;">minor repairs only</strong>. The following work is <strong style="color:#F05555;">not permitted</strong> and must be done by a licensed contractor:
+          <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <span>❌ Electrical panel work</span>
+            <span>❌ Plumbing behind walls</span>
+            <span>❌ Gas lines</span>
+            <span>❌ Structural/load-bearing</span>
+            <span>❌ HVAC installation</span>
+            <span>❌ Work requiring permits</span>
+          </div>
+          <div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,0.05);border-radius:6px;">
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="qp-handyman-agree" style="margin-top:2px;accent-color:var(--teal);flex-shrink:0;">
+              <span style="font-size:12px;color:rgba(255,255,255,0.7);">I confirm this job does not involve licensed trade work. I understand Detour is a technology marketplace and is not responsible for work performed.</span>
+            </label>
+          </div>
+        </div>
       </div>
-      <div id="qp-breakdown" style="display:none;font-size:12px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
+      <div class="field-group"><label id="qp-service-label">Describe the job <span class="req">*</span></label><textarea id="qp-service-desc" rows="3" placeholder="What needs to be done, where, and any special requirements..."></textarea></div>
+      <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--teal);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">📍 Location</div>
+        <div class="field-group" style="margin-bottom:8px;">
+          <div class="autocomplete-wrap">
+            <input type="text" id="qp-service-addr" placeholder="Where is the work?" style="font-size:14px;" autocomplete="off" oninput="addressAutocomplete(this,'qp-service-ac','qp-service-zip','qp-service-city','qp-service-state')">
+            <div id="qp-service-ac" class="autocomplete-list" style="display:none"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="field-group" style="flex:2;margin:0;"><input type="text" id="qp-service-city" placeholder="City" value="Durango" style="font-size:14px;"></div>
+          <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-service-state" placeholder="State" value="CO" maxlength="2" style="font-size:14px;text-transform:uppercase;"></div>
+          <div class="field-group" style="flex:1;margin:0;"><input type="text" id="qp-service-zip" placeholder="Zip" maxlength="5" style="font-size:14px;" inputmode="numeric"></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Your offer</label>
+        <div class="price-input-wrap">
+          <span class="price-dollar">$</span>
+          <input type="number" id="qp-service-price" placeholder="75" min="10" step="5" oninput="updateQPServiceBreakdown()">
+        </div>
+        <div id="qp-service-breakdown" style="display:none;font-size:12px;color:rgba(255,255,255,0.5);margin-top:6px;"></div>
+      </div>
     </div>
-    <div class="field-group">
-      <label>Item Size</label>
-      <select id="qp-size">
-        <option value="small_box">Small Box</option>
-        <option value="medium_box">Medium Box</option>
-        <option value="large_box">Large Box</option>
-        <option value="envelope">Envelope / Doc</option>
-        <option value="oversized">Oversized / Furniture</option>
-      </select>
-    </div>
+
     <div style="background:var(--dark2);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;" id="qp-payment-section">
-      <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">💳 Payment — charged when driver accepts</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">💳 Payment — charged when helper accepts</div>
       <div id="qp-payment-status">
         <div style="display:flex;align-items:center;justify-content:center;padding:12px;color:rgba(255,255,255,0.3);font-size:13px;">Checking payment method...</div>
       </div>
       <div id="qp-stripe-error" class="error-msg" style="margin-top:6px;"></div>
     </div>
     <div id="qp-error" class="error-msg"></div>
-    <button class="btn-primary btn-large" onclick="submitQuickPost()">Post Delivery →</button>
+    <button class="btn-primary btn-large" id="qp-submit-btn" onclick="submitQuickPost()">Post Delivery →</button>
     <button class="btn-secondary" onclick="closeQuickPost()" style="margin-top:8px;">Cancel</button>
   </div>
 </div>
@@ -730,8 +888,8 @@ function initStripeElements(){
 let currentUser=null,currentJobId=null,currentJobPerspective='shipper',jobPollInterval=null;
 const SZ={envelope:'Envelope / Doc',small_box:'Small Box',medium_box:'Medium Box',large_box:'Large Box',oversized:'Oversized / Furniture'};
 const ST={open:'Open',accepted:'Driver Matched',in_transit:'In Transit',completed:'Completed'};
-const TL={standard:'📦 General',marketplace:'🛋️ Marketplace',retail:'🚴 Retail',errand:'🛍️ Errand',business:'🏢 Business'};
-const TH={standard:'Standard delivery between two locations.',marketplace:'Sold an item online? Get it delivered. Buyer or seller can post. Item photos required.',retail:'Shop delivering to a customer, or customer needs a shop purchase brought to them.',errand:'Need someone to pick something up for you from a store.',business:'Business-to-business delivery — products, documents, samples.'};
+const TL={standard:'📦 Delivery',marketplace:'🛋️ Marketplace',retail:'🚴 Retail',errand:'🛍️ Errand',business:'🏢 Business',yard_work:'🌿 Yard & Outdoor',labor:'💪 Labor & Moving',dump_run:'🚛 Dump Run',cleaning:'🧹 Cleaning',handyman:'🔧 Handyman'};
+const TH={standard:'Standard delivery between two locations.',marketplace:'Sold an item online? Get it delivered. Buyer or seller can post. Item photos required.',retail:'Shop delivering to a customer, or customer needs a shop purchase brought to them.',errand:'Need someone to pick something up for you from a store.',business:'Business-to-business delivery — products, documents, samples.',yard_work:'Lawn mowing, landscaping, snow removal, firewood, or any outdoor work.',labor:'Moving help, furniture assembly, loading/unloading, or general labor.',dump_run:'Need a load hauled to the dump or transfer station? Post it here.',cleaning:'House cleaning, deep clean, move-in/out cleaning, or office cleaning.',handyman:'Minor repairs, painting, mounting, patching — no licensed trade work.'};
 
 function showTab(t){
   document.getElementById('login-form').style.display=t==='login'?'block':'none';
@@ -847,7 +1005,8 @@ function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(id==='view-home'){loadMyJobs();loadOpenJobs();loadMatchedJobs();}
-  if(id==='view-post')setTimeout(initStripeElements,100);
+  if(id==='view-post'){loadPaymentMethod('post-payment-status');}
+  if(id==='view-drive'){loadPaymentMethod('profile-payment-status');}
   if(id==='view-drive'){checkAndShowConnectPrompt();refreshVerificationStatus();}
 }
 
@@ -885,16 +1044,85 @@ async function refreshVerificationStatus(){
   }catch(e){console.log('Verification refresh error:',e.message);}
 }
 function setNavActive(el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
+const SERVICE_TYPES = ['yard_work','labor','dump_run','cleaning','handyman'];
+const SERVICE_TITLES = {yard_work:'Yard & Outdoor Details',labor:'Labor & Moving Details',dump_run:'Dump Run Details',cleaning:'Cleaning Details',handyman:'Handyman Details'};
+function isServiceType(type){ return SERVICE_TYPES.includes(type); }
 function selectJobType(type,el){
   document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('active'));el.classList.add('active');
-  document.getElementById('job-type').value=type;document.getElementById('type-hint').textContent=TH[type]||'';
+  document.getElementById('job-type').value=type;
+  document.getElementById('type-hint').textContent=TH[type]||'';
+  const isService=isServiceType(type);
+  // Show/hide delivery vs service fields
   document.getElementById('marketplace-fields').style.display=type==='marketplace'?'block':'none';
   document.getElementById('errand-fields').style.display=type==='errand'?'block':'none';
-  document.getElementById('disassembly-row').style.display=(type==='marketplace'||type==='oversized')?'flex':'none';
+  document.getElementById('disassembly-row').style.display=(type==='marketplace')?'flex':'none';
+  document.getElementById('service-fields').style.display=isService?'block':'none';
+  if(isService) document.getElementById('service-fields-title').textContent=SERVICE_TITLES[type]||'Service Details';
+  // Show/hide handyman warning in full post form
+  const fullHandymanWarning=document.getElementById('full-handyman-warning');
+  if(fullHandymanWarning) fullHandymanWarning.style.display=type==='handyman'?'block':'none';
+  // Hide delivery-specific sections for service jobs
+  const routeSection=document.querySelector('#view-post .form-section:has(#job-pickup-addr)');
+  const itemSection=document.querySelector('#view-post .form-section:has(#job-title)');
+  const offerSection=document.querySelector('#view-post .form-section:has(#job-price)');
+  if(routeSection) routeSection.style.display=isService?'none':'block';
+  if(itemSection) itemSection.style.display=isService?'none':'block';
+  if(offerSection) offerSection.style.display=isService?'none':'block';
+}
+function updateServiceBreakdown(){
+  const price=parseFloat(document.getElementById('service-price')?.value);
+  const bd=document.getElementById('service-breakdown');
+  if(!bd) return;
+  if(isNaN(price)||price<10){bd.style.display='none';return;}
+  const fee=price*0.20;
+  const payout=price-fee;
+  document.getElementById('sb-payout').textContent='$'+payout.toFixed(2);
+  document.getElementById('sb-fee').textContent='$'+fee.toFixed(2);
+  bd.style.display='block';
 }
 function previewListingPhotos(input){
   const row=document.getElementById('listing-photo-row');
   Array.from(input.files).forEach(f=>{const img=document.createElement('img');img.className='photo-thumb';img.src=URL.createObjectURL(f);row.insertBefore(img,row.lastElementChild);});
+}
+function renderPaymentStatus(pm, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(pm){
+    const brand = pm.card.brand.charAt(0).toUpperCase()+pm.card.brand.slice(1);
+    el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--dark2);border:0.5px solid rgba(0,194,168,0.3);border-radius:var(--rs);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:22px;">💳</span>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#fff;">${brand} ····${pm.card.last4}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);">Expires ${pm.card.exp_month}/${pm.card.exp_year}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="addPaymentMethod()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 12px;font-size:12px;color:rgba(255,255,255,0.6);cursor:pointer;">Change</button>
+        <button onclick="removePaymentMethod('${pm.id}','${containerId}')" style="background:none;border:1px solid rgba(255,80,80,0.3);border-radius:20px;padding:5px 12px;font-size:12px;color:rgba(255,80,80,0.7);cursor:pointer;">Remove</button>
+      </div>
+    </div>`;
+  } else {
+    el.innerHTML=`<button onclick="addPaymentMethod()" style="width:100%;background:var(--dark2);border:1px dashed rgba(255,255,255,0.2);border-radius:var(--rs);padding:14px;font-size:14px;color:rgba(255,255,255,0.5);cursor:pointer;text-align:center;">+ Add Payment Method</button>
+    <div style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:8px;text-align:center;">Supports Visa, Mastercard, Amex, Apple Pay</div>`;
+  }
+}
+async function loadPaymentMethod(containerId){
+  const uid=currentUser?.userId||localStorage.getItem('detour_uid')||'';
+  try{
+    const d=await api('GET','/api/stripe/payment-methods');
+    renderPaymentStatus(d.payment_methods?.[0]||null, containerId);
+  }catch(e){
+    renderPaymentStatus(null, containerId);
+  }
+}
+async function removePaymentMethod(pmId, containerId){
+  if(!confirm('Remove this payment method?')) return;
+  try{
+    await api('DELETE',`/api/stripe/payment-methods/${pmId}`);
+    renderPaymentStatus(null, containerId);
+    toast('Payment method removed');
+  }catch(e){toast('Could not remove: '+e.message);}
 }
 function switchDriveMode(mode){
   document.getElementById('drive-post-panel').style.display=mode==='post'?'block':'none';
@@ -1062,7 +1290,10 @@ async function loadMyJobs(){
   }catch(e){list.innerHTML='<div class="empty-state">Could not load jobs</div>';}
 }
 function jobCard(job,isDriver=false){
-  const payout=((job.offered_price||0)*0.75).toFixed(2);
+  const SERVICE_TYPES=['yard_work','labor','dump_run','cleaning','handyman'];
+  const isService=SERVICE_TYPES.includes(job.job_type);
+  const helperLabel=isService?'Helper':'Driver';
+  const payout=((job.offered_price||0)*(isService?0.80:0.75)).toFixed(2);
   const pickupLoc=job.pickup_state?`${escHtml(job.pickup_city)}, ${escHtml(job.pickup_state)}`:escHtml(job.pickup_city);
   const dropoffLoc=job.dropoff_state?`${escHtml(job.dropoff_city)}, ${escHtml(job.dropoff_state)}`:escHtml(job.dropoff_city);
   const card=`<div class="job-card" onclick="openJob('${job.id}','${isDriver?'driver':'shipper'}')"><div class="job-card-header"><div class="job-card-title">${escHtml(job.title)}</div><div class="job-price">$${parseFloat(job.offered_price).toFixed(2)}</div></div><div class="job-route"><div class="route-dot start"></div><div class="route-city">${pickupLoc}</div><div class="route-line"></div><div class="route-city">${dropoffLoc}</div><div class="route-dot end"></div></div><div class="job-meta"><span class="status-badge status-${job.status}">${ST[job.status]||job.status}</span><span>${TL[job.job_type]||'📦 General'}</span><span>${SZ[job.item_size]||job.item_size}</span>${job.fragile?'<span>⚠️ Fragile</span>':''}${isDriver?`<span style="color:var(--green);font-weight:600;">Earn $${payout}</span><span style="color:rgba(255,255,255,0.3);font-size:10px;">← swipe to accept</span>`:''}</div></div>`;
@@ -1284,8 +1515,38 @@ document.addEventListener('click',(e)=>{
     document.querySelectorAll('.autocomplete-list').forEach(l=>l.style.display='none');
   }
 });
-let qpHasPaymentMethod = false;
-function showNewCardEntry(){ addPaymentMethod(); }
+let qpHasPaymentMethod = false, qpCategory = 'delivery';
+function selectQPCategory(cat, el){
+  qpCategory = cat;
+  document.querySelectorAll('.qp-cat').forEach(c=>{
+    c.style.background='var(--dark2)';
+    c.style.borderColor='rgba(255,255,255,0.08)';
+    c.querySelector('span:last-child').style.color='rgba(255,255,255,0.5)';
+  });
+  el.style.background='rgba(0,194,168,0.1)';
+  el.style.borderColor='var(--teal)';
+  el.querySelector('span:last-child').style.color='var(--teal)';
+  const isService = cat !== 'delivery';
+  document.getElementById('qp-delivery-fields').style.display = isService ? 'none' : 'block';
+  document.getElementById('qp-service-fields').style.display = isService ? 'block' : 'none';
+  const labels = {yard_work:'Describe the yard work',labor:'Describe the labor needed',dump_run:'What needs hauling?',cleaning:'Describe the cleaning job',handyman:'Describe the repair/task'};
+  if(isService) document.getElementById('qp-service-label').textContent = (labels[cat]||'Describe the job') + ' *';
+  // Show handyman disclaimer
+  const handymanWarning = document.getElementById('qp-handyman-warning');
+  if(handymanWarning) handymanWarning.style.display = cat==='handyman' ? 'block' : 'none';
+  const btnLabels = {delivery:'Post Delivery →',yard_work:'Post Yard Job →',labor:'Post Labor Job →',dump_run:'Post Dump Run →',cleaning:'Post Cleaning Job →',handyman:'Post Handyman Job →'};
+  document.getElementById('qp-submit-btn').textContent = btnLabels[cat] || 'Post Job →';
+}
+function updateQPServiceBreakdown(){
+  const price = parseFloat(document.getElementById('qp-service-price')?.value);
+  const bd = document.getElementById('qp-service-breakdown');
+  if(!bd) return;
+  if(isNaN(price)||price<10){bd.style.display='none';return;}
+  const fee = (price*0.20).toFixed(2);
+  const payout = (price*0.80).toFixed(2);
+  bd.innerHTML = `Helper earns <strong style="color:var(--green)">$${payout}</strong> · Detour fee $${fee}`;
+  bd.style.display='block';
+}
 function showQuickPost(){
   document.getElementById('quick-post-modal').style.display='flex';
   // Check for saved payment method
@@ -1324,7 +1585,13 @@ function addPaymentMethod(){
       else toast('Could not open payment setup: '+d.error);
     }).catch(e=>toast('Error: '+e.message));
 }
-function closeQuickPost(){document.getElementById('quick-post-modal').style.display='none';qpSetupClientSecret=null;}
+function closeQuickPost(){
+  document.getElementById('quick-post-modal').style.display='none';
+  qpCategory='delivery';
+  // Reset category grid to delivery
+  const firstCat=document.querySelector('.qp-cat[data-cat="delivery"]');
+  if(firstCat) selectQPCategory('delivery',firstCat);
+}
 function updateQPBreakdown(){
   const price=parseFloat(document.getElementById('qp-price').value);
   const bd=document.getElementById('qp-breakdown');
@@ -1333,17 +1600,6 @@ function updateQPBreakdown(){
   bd.innerHTML=`Driver earns <strong style="color:var(--green)">$${(price*0.75).toFixed(2)}</strong> · Detour fee $${(price*0.25).toFixed(2)}`;
 }
 async function submitQuickPost(){
-  const title=document.getElementById('qp-title').value.trim();
-  const pickupAddr=document.getElementById('qp-pickup-addr').value.trim();
-  const from=document.getElementById('qp-from').value.trim()||'Durango';
-  const fromState=document.getElementById('qp-from-state').value.trim().toUpperCase()||'CO';
-  const fromZip=document.getElementById('qp-from-zip')?.value.trim()||'';
-  const dropoffAddr=document.getElementById('qp-dropoff-addr').value.trim();
-  const to=document.getElementById('qp-to').value.trim();
-  const toState=document.getElementById('qp-to-state').value.trim().toUpperCase()||'CO';
-  const toZip=document.getElementById('qp-to-zip')?.value.trim()||'';
-  const price=document.getElementById('qp-price').value;
-  const size=document.getElementById('qp-size').value;
   const errEl=document.getElementById('qp-error');
   errEl.textContent='';
   if(!title){errEl.textContent='Please add a title';return;}
@@ -1359,31 +1615,80 @@ async function submitQuickPost(){
   const submitBtn=document.querySelector('#quick-post-modal .btn-primary');
   if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Posting...';}
 
+  const isService = qpCategory !== 'delivery';
   const fd=new FormData();
-  fd.append('job_type','standard');
-  fd.append('title',title);
-  fd.append('pickup_address',pickupAddr);
-  fd.append('pickup_city',from);
-  fd.append('pickup_state',fromState);
-  fd.append('pickup_zip',fromZip);
-  fd.append('dropoff_address',dropoffAddr);
-  fd.append('dropoff_city',to);
-  fd.append('dropoff_state',toState);
-  fd.append('dropoff_zip',toZip);
-  fd.append('item_size',size);
-  fd.append('offered_price',price);
+  fd.append('job_type', qpCategory);
+
+  if(isService){
+    const desc = document.getElementById('qp-service-desc').value.trim();
+    const addr = document.getElementById('qp-service-addr').value.trim();
+    const city = document.getElementById('qp-service-city').value.trim();
+    const state = document.getElementById('qp-service-state').value.trim().toUpperCase()||'CO';
+    const zip = document.getElementById('qp-service-zip').value.trim();
+    const price = document.getElementById('qp-service-price').value;
+    // Handyman requires disclaimer acknowledgment
+    if(qpCategory==='handyman'){
+      const agreed = document.getElementById('qp-handyman-agree')?.checked;
+      if(!agreed){errEl.textContent='Please confirm this job does not involve licensed trade work';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Handyman Job →';}return;}
+    }
+    if(!desc){errEl.textContent='Please describe the job';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=document.getElementById('qp-submit-btn').dataset.label||'Post Job →';}return;}
+    if(!price||parseFloat(price)<10){errEl.textContent='Minimum offer is $10 for service jobs';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=document.getElementById('qp-submit-btn').dataset.label||'Post Job →';}return;}
+    fd.append('title', desc.substring(0,80));
+    fd.append('description', desc);
+    fd.append('pickup_address', addr||city);
+    fd.append('pickup_city', city||'Durango');
+    fd.append('pickup_state', state);
+    fd.append('pickup_zip', zip);
+    fd.append('dropoff_address', addr||city);
+    fd.append('dropoff_city', city||'Durango');
+    fd.append('dropoff_state', state);
+    fd.append('dropoff_zip', zip);
+    fd.append('item_size', 'small_box');
+    fd.append('offered_price', price);
+  } else {
+    const title=document.getElementById('qp-title').value.trim();
+    const pickupAddr=document.getElementById('qp-pickup-addr').value.trim();
+    const from=document.getElementById('qp-from').value.trim();
+    const fromState=document.getElementById('qp-from-state').value.trim().toUpperCase()||'CO';
+    const fromZip=document.getElementById('qp-from-zip')?.value.trim()||'';
+    const dropoffAddr=document.getElementById('qp-dropoff-addr').value.trim();
+    const to=document.getElementById('qp-to').value.trim();
+    const toState=document.getElementById('qp-to-state').value.trim().toUpperCase()||'CO';
+    const toZip=document.getElementById('qp-to-zip')?.value.trim()||'';
+    const price=document.getElementById('qp-price').value;
+    const size=document.getElementById('qp-size').value;
+    if(!title){errEl.textContent='Please add a title';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Delivery →';}return;}
+    if(!pickupAddr){errEl.textContent='Please enter a pickup address';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Delivery →';}return;}
+    if(!to){errEl.textContent='Please enter a destination city';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Delivery →';}return;}
+    if(!dropoffAddr){errEl.textContent='Please enter a dropoff address';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Delivery →';}return;}
+    if(!price||parseFloat(price)<5){errEl.textContent='Minimum offer is $5';if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='Post Delivery →';}return;}
+    fd.append('title',title);
+    fd.append('pickup_address',pickupAddr);
+    fd.append('pickup_city',from);
+    fd.append('pickup_state',fromState);
+    fd.append('pickup_zip',fromZip);
+    fd.append('dropoff_address',dropoffAddr);
+    fd.append('dropoff_city',to);
+    fd.append('dropoff_state',toState);
+    fd.append('dropoff_zip',toZip);
+    fd.append('item_size',size);
+    fd.append('offered_price',price);
+  }
 
   try{
     const res=await fetch('/api/jobs',{method:'POST',body:fd,credentials:'include',headers:{'x-user-id':currentUser?.userId||localStorage.getItem('detour_uid')||''}});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
-    toast('Delivery posted! 🎉 Looking for a driver...');
+    toast(qpCategory==='delivery'?'Delivery posted! 🎉 Looking for a driver...':'Job posted! 🎉 Looking for a helper...');
     closeQuickPost();
+    qpCategory='delivery';
     document.getElementById('qp-title').value='';
+    document.getElementById('qp-service-desc').value='';
     document.getElementById('qp-pickup-addr').value='';
     document.getElementById('qp-dropoff-addr').value='';
     document.getElementById('qp-to').value='';
     document.getElementById('qp-price').value='';
+    document.getElementById('qp-service-price').value='';
     loadOpenJobs();loadMyJobs();
   }catch(e){
     errEl.textContent=e.message;
