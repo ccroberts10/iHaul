@@ -1120,7 +1120,7 @@ function initStripeElements(){
 }
 </script>
 <script>
-let currentUser=null,currentJobId=null,currentJobPerspective='shipper',jobPollInterval=null;
+let currentUser=null,currentJobId=null,currentJobPerspective='shipper',currentJobType=null,jobPollInterval=null;
 const SZ={envelope:'Envelope / Doc',small_box:'Small Box',medium_box:'Medium Box',large_box:'Large Box',oversized:'Oversized / Furniture'};
 const ST={open:'Open',accepted:'Driver Matched',in_transit:'In Transit',completed:'Completed'};
 const TL={standard:'📦 Delivery',marketplace:'🛋️ Marketplace',retail:'🚴 Retail',errand:'🛍️ Errand',business:'🏢 Business',yard_work:'🌿 Yard & Outdoor',labor:'💪 Labor & Moving',dump_run:'🚛 Dump Run',cleaning:'🧹 Cleaning',handyman:'🔧 Handyman'};
@@ -1646,7 +1646,7 @@ function jobCard(job,isDriver=false){
   return`<div style="margin-bottom:10px;">${card}</div>`;
 }
 async function openJob(jobId,perspective='shipper'){
-  currentJobId=jobId;currentJobPerspective=perspective;
+  currentJobId=jobId;currentJobPerspective=perspective;currentJobType=null;
   const backView=perspective==='driver'?'view-gigs':'view-home';
   document.getElementById('job-back-btn').onclick=()=>{showView(backView);clearInterval(jobPollInterval);};
   showView('view-job');await loadJobDetail();
@@ -1657,6 +1657,7 @@ async function loadJobDetail(silent=false){
   if(!silent)c.innerHTML='<div class="empty-state">Loading...</div>';
   try{
     const{job,messages}=await api('GET',`/api/jobs/${currentJobId}`);
+    currentJobType = job.job_type; // Track for confirmPickup/confirmDelivery
     if(silent){
       // Only update the message thread — don't wipe what user is typing
       const thread=document.getElementById('msg-thread');
@@ -1774,7 +1775,10 @@ function renderJobDetail(job,messages){
   if(job.status==='open'&&currentJobPerspective==='driver'&&!isShipper)h+=`<button class="btn-primary btn-large" onclick="acceptJob('${job.id}')">Accept — Earn $${dp} →</button>`;
 
   // ── I'M HERE BUTTON ──
-  if(job.status==='accepted'&&isDriver)h+=`<button class="im-here-btn" onclick="imHere('${job.id}')">📍 I'm here — notify ${shipperLabel.toLowerCase()}</button>`;
+  if(job.status==='accepted'&&isDriver){
+    const arrivalLabel = isServiceUI ? '📍 Arrived at job — notify poster' : '📍 I\'m here — notify shipper';
+    h+=`<button class="im-here-btn" onclick="imHere('${job.id}','${isServiceUI}')"> ${arrivalLabel}</button>`;
+  }
 
   // ── DELETE BUTTON ──
   if(job.status==='open'&&isShipper)h+=`<button class="btn-secondary btn-large" style="background:rgba(240,85,85,0.1);border-color:rgba(240,85,85,0.3);color:var(--red);margin-top:8px;" onclick="deleteJob('${job.id}')">🗑 Delete This Listing</button>`;
@@ -2396,10 +2400,12 @@ function renderTimeline(status, jobType){
 }
 
 // ── I'M HERE BUTTON ──
-async function imHere(jobId){
+async function imHere(jobId, isService){
+  const msg = isService==='true' ? "👋 I've arrived at the job location and I'm ready to get started!" : "🚗 I'm here! Ready for pickup.";
+  const successMsg = isService==='true' ? "Poster notified you've arrived! ✓" : "Shipper notified you're here! ✓";
   try{
-    await api('POST',`/api/jobs/${jobId}/messages`,{content:"🚗 I'm here! Ready for pickup."});
-    toast("Driver notified you're here! ✓");
+    await api('POST',`/api/jobs/${jobId}/messages`,{content: msg});
+    toast(successMsg);
     await loadJobDetail(true);
   }catch(e){toast('Could not send notification');}
 }
@@ -2785,26 +2791,38 @@ async function uploadPhotos(jobId,type,input){
   }catch(e){toast('Photo upload failed: '+e.message);}
 }
 async function confirmPickup(jobId){
+  const SERVICE_TYPES=['yard_work','labor','dump_run','cleaning','handyman'];
+  const isService = SERVICE_TYPES.includes(currentJobType);
+  const confirmMsg = isService ? 'Confirm you\'ve arrived and are starting the job?' : 'Confirm pickup — item is in your possession?';
+  const successMsg = isService ? 'Job started! Get to work 💪' : 'Pickup confirmed! Item is now in transit.';
+  if(!confirm(confirmMsg)) return;
   const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid')||'';
   try{
     const res=await fetch(`/api/jobs/${jobId}/pickup`,{method:'POST',body:new FormData(),credentials:'include',headers:{'x-user-id':uid}});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
-    toast('Pickup confirmed! Item is now in transit.');
+    toast(successMsg);
     await loadJobDetail();
-  }catch(e){toast(e.message||'Could not confirm pickup');}
+  }catch(e){toast(e.message||'Could not confirm');}
 }
 async function confirmDelivery(jobId){
-  if(!confirm('Confirm delivery complete and release payment to driver?'))return;
+  const SERVICE_TYPES=['yard_work','labor','dump_run','cleaning','handyman'];
+  const isService = SERVICE_TYPES.includes(currentJobType);
+  const helperWord = isService ? 'worker' : 'driver';
+  const confirmMsg = isService
+    ? `Confirm the job is complete and release payment to your ${helperWord}?`
+    : `Confirm delivery complete and release payment to your ${helperWord}?`;
+  const successMsg = isService ? 'Job complete! Payment released to worker. 🎉' : 'Delivery confirmed! Payment released. 🎉';
+  if(!confirm(confirmMsg)) return;
   const uid=currentUser?.userId||currentUser?.id||localStorage.getItem('detour_uid')||'';
   try{
     const res=await fetch(`/api/jobs/${jobId}/confirm`,{method:'POST',body:new FormData(),credentials:'include',headers:{'x-user-id':uid}});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
-    toast('Delivery confirmed! Payment released. 🎉');
+    toast(successMsg);
     clearInterval(jobPollInterval);
     await loadJobDetail();
-  }catch(e){toast(e.message||'Could not confirm delivery');}
+  }catch(e){toast(e.message||'Could not confirm');}
 }
 let selectedRating=0;
 function setRating(score){
