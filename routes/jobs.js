@@ -514,10 +514,23 @@ router.post('/:id/rate', requireAuth, (req, res) => {
   const existing = db.prepare('SELECT id FROM ratings WHERE job_id = ? AND rater_id = ?').get(job.id, req.session.userId);
   if (existing) return res.status(400).json({ error: 'Already rated' });
   const s = Math.min(5, Math.max(1, parseInt(score)));
-  db.prepare('INSERT INTO ratings (id, job_id, rater_id, ratee_id, score, comment) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(uuidv4(), job.id, req.session.userId, isShipper ? job.driver_id : job.shipper_id, s, comment || null);
-  db.prepare('UPDATE users SET rating_total = rating_total + ?, rating_count = rating_count + 1 WHERE id = ?').run(s, isShipper ? job.driver_id : job.shipper_id);
+  const rateeId = isShipper ? job.driver_id : job.shipper_id;
+  const role = isShipper ? 'helper' : 'poster'; // who is being rated
+  db.prepare('INSERT INTO ratings (id, job_id, rater_id, ratee_id, score, comment, role) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(uuidv4(), job.id, req.session.userId, rateeId, s, comment || null, role);
+  db.prepare('UPDATE users SET rating_total = rating_total + ?, rating_count = rating_count + 1 WHERE id = ?').run(s, rateeId);
   res.json({ success: true });
+});
+
+// Get ratings for a specific job (to know who has already rated)
+router.get('/:id/ratings', requireAuth, (req, res) => {
+  const ratings = db.prepare(`
+    SELECT r.rater_id, r.ratee_id, r.score, r.comment, r.role, r.created_at,
+           u.name as rater_name, u.profile_photo as rater_photo
+    FROM ratings r JOIN users u ON u.id = r.rater_id
+    WHERE r.job_id = ?
+  `).all(req.params.id);
+  res.json(ratings);
 });
 
 module.exports = router;
