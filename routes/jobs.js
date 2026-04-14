@@ -39,7 +39,7 @@ function calcPricing(offeredPrice, jobType) {
   return { platform_fee: fee, driver_payout: payout };
 }
 
-const VALID_JOB_TYPES = ['business', 'marketplace', 'retail', 'errand', 'standard'];
+const VALID_JOB_TYPES = ['standard', 'marketplace', 'retail', 'errand', 'business', 'yard_work', 'labor', 'dump_run', 'cleaning', 'handyman'];
 
 // ─── DRIVER ROUTES (reverse matching) ────────────────────────────────────────
 
@@ -128,6 +128,12 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
   const jobType = VALID_JOB_TYPES.includes(job_type) ? job_type : 'standard';
   const price = parseFloat(offered_price);
   if (isNaN(price) || price < 5) return res.status(400).json({ error: 'Minimum price is $5' });
+
+  // Enforce $1,500 max for delivery jobs
+  const DELIVERY_TYPES = ['standard', 'marketplace', 'retail', 'errand', 'business'];
+  if (DELIVERY_TYPES.includes(jobType) && price > 1500) {
+    return res.status(400).json({ error: 'Maximum delivery offer is $1,500. For higher-value items, please arrange alternative shipping.' });
+  }
 
   if (jobType === 'marketplace' && (!req.files || req.files.length === 0)) {
     return res.status(400).json({ error: 'Marketplace jobs require at least one item photo' });
