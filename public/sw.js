@@ -1,4 +1,4 @@
-const CACHE = 'detour-v5';
+const CACHE = 'detour-v6';
 const OFFLINE_URL = '/app';
 
 const PRECACHE = [
