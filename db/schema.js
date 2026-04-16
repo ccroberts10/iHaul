@@ -145,3 +145,40 @@ migrate(`ALTER TABLE users ADD COLUMN bio TEXT`);
 migrate(`ALTER TABLE jobs ADD COLUMN pickup_state TEXT`);
 migrate(`ALTER TABLE jobs ADD COLUMN dropoff_state TEXT`);
 migrate(`ALTER TABLE ratings ADD COLUMN role TEXT DEFAULT 'driver'`);
+migrate(`ALTER TABLE jobs ADD COLUMN promo_code TEXT`);
+migrate(`ALTER TABLE jobs ADD COLUMN promo_discount REAL DEFAULT 0`);
+
+// Promo codes table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS promo_codes (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    description TEXT,
+    discount_pct REAL NOT NULL,
+    applies_to TEXT DEFAULT 'delivery_fee',
+    active INTEGER DEFAULT 1,
+    usage_count INTEGER DEFAULT 0,
+    max_uses INTEGER DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// Promo usage log
+db.exec(`
+  CREATE TABLE IF NOT EXISTS promo_usage (
+    id TEXT PRIMARY KEY,
+    code TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    job_id TEXT NOT NULL,
+    discount_amount REAL NOT NULL,
+    used_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// Seed DBP10 promo code if it doesn't exist
+const existingPromo = db.prepare('SELECT id FROM promo_codes WHERE code = ?').get('DBP10');
+if (!existingPromo) {
+  db.prepare(`INSERT INTO promo_codes (id, code, description, discount_pct, applies_to, active)
+    VALUES (?, ?, ?, ?, ?, ?)`
+  ).run('promo-dbp10', 'DBP10', 'Durango Bike Project Marketplace — 10% off delivery fee', 10, 'delivery_fee', 1);
+}
