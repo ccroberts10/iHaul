@@ -43,6 +43,33 @@ const VALID_JOB_TYPES = ['standard', 'marketplace', 'retail', 'errand', 'busines
 
 // ─── DRIVER ROUTES (reverse matching) ────────────────────────────────────────
 
+// ── PROMO CODE VALIDATION ──
+router.post('/promo/validate', requireAuth, (req, res) => {
+  const { code, price } = req.body;
+  if (!code || !price) return res.status(400).json({ error: 'Code and price required' });
+
+  const promo = db.prepare('SELECT * FROM promo_codes WHERE code = ? AND active = 1').get(code.toUpperCase().trim());
+  if (!promo) return res.status(404).json({ error: 'Invalid or expired promo code' });
+
+  if (promo.max_uses !== null && promo.usage_count >= promo.max_uses) {
+    return res.status(400).json({ error: 'This promo code has reached its usage limit' });
+  }
+
+  const deliveryPrice = parseFloat(price);
+  const discountAmount = parseFloat(((promo.discount_pct / 100) * deliveryPrice).toFixed(2));
+  const discountedPrice = parseFloat((deliveryPrice - discountAmount).toFixed(2));
+
+  res.json({
+    valid: true,
+    code: promo.code,
+    description: promo.description,
+    discount_pct: promo.discount_pct,
+    discount_amount: discountAmount,
+    original_price: deliveryPrice,
+    discounted_price: discountedPrice
+  });
+});
+
 router.post('/driver-routes', requireAuth, (req, res) => {
   const { origin_city, destination_city, departure_time, max_detour_minutes, vehicle_description, haul_types } = req.body;
   if (!origin_city || !destination_city || !departure_time) {
@@ -118,7 +145,7 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
     pickup_address, pickup_city, pickup_state, pickup_zip,
     dropoff_address, dropoff_city, dropoff_state, dropoff_zip,
     offered_price, notes, seller_name, seller_phone, buyer_name, buyer_phone,
-    store_name, item_to_pickup, requested_driver_route_id
+    store_name, item_to_pickup, requested_driver_route_id, promo_code
   } = req.body;
 
   if (!title || !item_size || !pickup_address || !pickup_city || !dropoff_address || !dropoff_city || !offered_price) {
@@ -139,7 +166,21 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
     return res.status(400).json({ error: 'Marketplace jobs require at least one item photo' });
   }
 
-  const { platform_fee, driver_payout } = calcPricing(price, jobType);
+  // Apply promo code discount if provided
+  let promoDiscount = 0;
+  let appliedPromoCode = null;
+  let finalPrice = price;
+
+  if (promo_code) {
+    const promo = db.prepare('SELECT * FROM promo_codes WHERE code = ? AND active = 1').get(promo_code.toUpperCase().trim());
+    if (promo && (promo.max_uses === null || promo.usage_count < promo.max_uses)) {
+      promoDiscount = parseFloat(((promo.discount_pct / 100) * price).toFixed(2));
+      finalPrice = parseFloat((price - promoDiscount).toFixed(2));
+      appliedPromoCode = promo.code;
+    }
+  }
+
+  const { platform_fee, driver_payout } = calcPricing(finalPrice, jobType);
   const id = uuidv4();
   const listingPhotos = (req.files || []).map(f => `/uploads/${f.filename}`);
 
@@ -169,7 +210,7 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
 
         if (pmId) {
           const pi = await stripe.paymentIntents.create({
-            amount: Math.round(price * 100),
+            amount: Math.round(finalPrice * 100),
             currency: 'usd',
             capture_method: 'manual',
             payment_method_types: ['card'],
@@ -177,7 +218,7 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
             payment_method: pmId,
             confirm: true,
             off_session: true,
-            metadata: { job_id: id, shipper_id: userId, job_type: jobType }
+            metadata: { job_id: id, shipper_id: userId, job_type: jobType, promo_code: appliedPromoCode || '' }
           });
           paymentIntentId = pi.id;
           console.log('PI created server-side:', pi.id, 'status:', pi.status);
@@ -195,14 +236,22 @@ router.post('/', requireAuth, upload.array('listing_photos', 6), async (req, res
 
   db.prepare(`INSERT INTO jobs (id, shipper_id, job_type, title, description, item_size, item_weight,
     fragile, needs_disassembly, pickup_address, pickup_city, dropoff_address, dropoff_city,
-    offered_price, platform_fee, driver_payout, listing_photos, notes, extra_data, stripe_payment_intent_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    offered_price, platform_fee, driver_payout, listing_photos, notes, extra_data, stripe_payment_intent_id,
+    promo_code, promo_discount)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(id, req.session.userId, jobType, title, description || null, item_size,
     item_weight || null, fragile ? 1 : 0, needs_disassembly ? 1 : 0,
     pickup_address, pickup_city, dropoff_address, dropoff_city,
-    price, platform_fee, driver_payout, JSON.stringify(listingPhotos),
-    notes || null, extraData, paymentIntentId
+    finalPrice, platform_fee, driver_payout, JSON.stringify(listingPhotos),
+    notes || null, extraData, paymentIntentId, appliedPromoCode, promoDiscount
   );
+
+  // Track promo usage
+  if (appliedPromoCode) {
+    db.prepare('UPDATE promo_codes SET usage_count = usage_count + 1 WHERE code = ?').run(appliedPromoCode);
+    db.prepare(`INSERT INTO promo_usage (id, code, user_id, job_id, discount_amount) VALUES (?, ?, ?, ?, ?)`)
+      .run(uuidv4(), appliedPromoCode, req.session.userId, id, promoDiscount);
+  }
 
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
   job.pickup_state = pickup_state || null;
