@@ -153,12 +153,8 @@ router.post('/update-profile', (req, res) => {
 
 // Upload profile photo
 router.post('/profile-photo', (req, res) => {
-  // Extract userId from all possible sources before multer runs
   const userId = req.session?.userId || req.headers['x-user-id'];
-  if (!userId) {
-    console.log('Profile photo: no userId found. Session:', req.session?.userId, 'Header:', req.headers['x-user-id']);
-    return res.status(401).json({ error: 'Login required — please sign out and back in' });
-  }
+  if (!userId) return res.status(401).json({ error: 'Login required' });
 
   upload.single('photo')(req, res, (err) => {
     if (err) {
@@ -166,17 +162,28 @@ router.post('/profile-photo', (req, res) => {
       return res.status(400).json({ error: 'Upload error: ' + err.message });
     }
 
-    if (!req.file) {
-      console.log('Profile photo: no file in request');
-      return res.status(400).json({ error: 'No photo received' });
+    console.log('Profile photo req.file:', JSON.stringify(req.file));
+
+    if (!req.file) return res.status(400).json({ error: 'No photo received' });
+
+    // Build path from filename or full path
+    let photoPath;
+    if (req.file.filename) {
+      photoPath = `/uploads/${req.file.filename}`;
+    } else if (req.file.path) {
+      // Extract just the filename from the full path
+      const parts = req.file.path.replace(/\\/g, '/').split('/');
+      photoPath = `/uploads/${parts[parts.length - 1]}`;
+    } else {
+      console.error('No filename or path on req.file:', req.file);
+      return res.status(500).json({ error: 'File saved but path unknown' });
     }
 
-    const photoPath = `/uploads/${req.file.filename}`;
-    console.log('Profile photo uploading:', photoPath, 'for user:', userId);
+    console.log('Profile photo path:', photoPath, 'for user:', userId);
 
     try {
       const result = db.prepare('UPDATE users SET profile_photo = ? WHERE id = ?').run(photoPath, userId);
-      console.log('Profile photo saved. Rows changed:', result.changes);
+      console.log('Profile photo DB updated. Rows changed:', result.changes);
       if (result.changes === 0) return res.status(404).json({ error: 'User not found' });
       res.json({ success: true, photo: photoPath });
     } catch(e) {
