@@ -152,18 +152,38 @@ router.post('/update-profile', (req, res) => {
 });
 
 // Upload profile photo
-router.post('/profile-photo', upload.single('photo'), requireAuth, (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No photo uploaded' });
-  const userId = req.session.userId || req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Login required' });
-  const photoPath = `/uploads/${req.file.filename}`;
-  try {
-    db.prepare('UPDATE users SET profile_photo = ? WHERE id = ?').run(photoPath, userId);
-    res.json({ success: true, photo: photoPath });
-  } catch(e) {
-    console.error('Profile photo DB error:', e.message);
-    res.status(500).json({ error: 'Could not save photo' });
+router.post('/profile-photo', (req, res) => {
+  // Extract userId from all possible sources before multer runs
+  const userId = req.session?.userId || req.headers['x-user-id'];
+  if (!userId) {
+    console.log('Profile photo: no userId found. Session:', req.session?.userId, 'Header:', req.headers['x-user-id']);
+    return res.status(401).json({ error: 'Login required — please sign out and back in' });
   }
+
+  upload.single('photo')(req, res, (err) => {
+    if (err) {
+      console.error('Profile photo multer error:', err.message, err.code);
+      return res.status(400).json({ error: 'Upload error: ' + err.message });
+    }
+
+    if (!req.file) {
+      console.log('Profile photo: no file in request');
+      return res.status(400).json({ error: 'No photo received' });
+    }
+
+    const photoPath = `/uploads/${req.file.filename}`;
+    console.log('Profile photo uploading:', photoPath, 'for user:', userId);
+
+    try {
+      const result = db.prepare('UPDATE users SET profile_photo = ? WHERE id = ?').run(photoPath, userId);
+      console.log('Profile photo saved. Rows changed:', result.changes);
+      if (result.changes === 0) return res.status(404).json({ error: 'User not found' });
+      res.json({ success: true, photo: photoPath });
+    } catch(e) {
+      console.error('Profile photo DB error:', e.message);
+      res.status(500).json({ error: 'Could not save: ' + e.message });
+    }
+  });
 });
 
 // Get public profile for any user
