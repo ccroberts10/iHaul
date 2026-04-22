@@ -644,6 +644,19 @@ textarea{resize:none}
       </div>
       <!-- Connect Bank Account — always visible -->
       <div id="connect-prompt-top" class="job-detail-card" style="margin-bottom:14px;display:none;"></div>
+
+      <!-- DRIVER VERIFICATION BANNER — shows until approved -->
+      <div id="driver-verify-banner" style="display:none;background:linear-gradient(135deg,rgba(0,194,168,0.12),rgba(0,194,168,0.06));border:1.5px solid var(--teal);border-radius:var(--r);padding:18px;margin-bottom:16px;cursor:pointer;" onclick="showDriverOnboard()">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="font-size:36px;flex-shrink:0;">🛡️</div>
+          <div style="flex:1;">
+            <div style="font-family:var(--font-display);font-size:17px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px;">Complete Driver Verification</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.55);line-height:1.5;">Upload your license and insurance to start accepting jobs and getting paid.</div>
+          </div>
+          <div style="color:var(--teal);font-size:20px;flex-shrink:0;">→</div>
+        </div>
+        <button class="btn-primary" style="margin-top:14px;font-size:14px;padding:12px;" onclick="event.stopPropagation();showDriverOnboard()">Upload Documents Now →</button>
+      </div>
       <div class="drive-mode-switch">
         <button class="drive-mode-btn active" id="dmb-post" onclick="switchDriveMode('post')">📍 Post My Route</button>
         <button class="drive-mode-btn" id="dmb-browse" onclick="switchDriveMode('browse')">🔍 Browse Jobs</button>
@@ -2960,6 +2973,26 @@ function updateVerificationStatus(user){
   // Then show this user's photos if they exist
   if(user.license_photo&&licThumb&&licPreview){licThumb.src=user.license_photo;licPreview.style.display='block';}
   if(user.insurance_photo&&insThumb&&insPreview){insThumb.src=user.insurance_photo;insPreview.style.display='block';}
+
+  // Show/hide the prominent banner at top of drive tab
+  const banner=document.getElementById('driver-verify-banner');
+  if(banner){
+    // Show banner if driver has a vehicle but isn't fully approved yet
+    if(user.vehicle_type && !user.driver_approved){
+      banner.style.display='block';
+      // Update banner text based on what's missing
+      const bannerDesc=banner.querySelector('div > div > div:last-child');
+      if(bannerDesc){
+        if(user.license_photo && user.insurance_photo){
+          bannerDesc.textContent='Documents submitted — under review. Usually approved within 24 hours.';
+          banner.style.borderColor='rgba(251,191,36,0.5)';
+          banner.style.background='linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.03))';
+        }
+      }
+    } else {
+      banner.style.display='none';
+    }
+  }
 
   // Show status banner
   if(user.driver_approved){
