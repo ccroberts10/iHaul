@@ -888,6 +888,15 @@ textarea{resize:none}
 
       <!-- BROWSE & EARN PANEL -->
       <div id="gigs-earn-panel" style="display:none;">
+
+        <!-- BECOME A DRIVER CTA — shows for unverified drivers -->
+        <div id="earn-driver-cta" style="display:none;background:linear-gradient(135deg,#080808,#0f1f1c);border:1.5px solid var(--teal);border-radius:var(--r);padding:18px;margin-bottom:16px;">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--teal);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">🚗 Become a Driver</div>
+          <div style="font-family:var(--font-display);font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;">Your drive just got <span style="color:var(--teal);">a raise.</span></div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:14px;">Upload your license and insurance to start accepting deliveries and earning $20–$80 per job.</div>
+          <button class="btn-primary" onclick="showDriverOnboard()" style="font-size:14px;padding:13px;margin:0;">🚗 Complete Driver Setup →</button>
+        </div>
+
         <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:16px;line-height:1.6;background:rgba(61,204,120,0.05);border:0.5px solid rgba(61,204,120,0.2);border-radius:var(--rs);padding:12px 14px;">
           🚗 <strong style="color:var(--green);">Free afternoon? Log on. Find a job. Get paid.</strong> No experience needed for most gigs.
         </div>
@@ -1000,9 +1009,9 @@ textarea{resize:none}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
       <span class="nav-label">Deliver</span>
     </button>
-    <button class="nav-item" onclick="showView('view-gigs');setNavActive(this)">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-      <span class="nav-label">Gigs</span>
+    <button class="nav-item" onclick="showView('view-gigs');switchGigsMode('earn');setNavActive(this)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span class="nav-label">Earn</span>
     </button>
     <button class="nav-item" onclick="showView('view-jobs');loadMyJobs();setNavActive(this)">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -1300,9 +1309,12 @@ function enterApp(name){
         updateHeaderAvatar(me.profile_photo);
         if(currentUser) currentUser.profile_photo = me.profile_photo;
       }
-      // Show driver CTA banner if not yet approved
+      // Show driver CTA banner if not yet approved — delay so modal stays open
       currentUser = Object.assign(currentUser||{}, me);
-      updateVerificationStatus(me);
+      const modal = document.getElementById('driver-onboard-modal');
+      if(!modal || modal.style.display !== 'flex'){
+        updateVerificationStatus(me);
+      }
     }catch(e){}
   }, 500);
   const soon=new Date(Date.now()+3600000);
@@ -2956,12 +2968,18 @@ function updateVerificationStatus(user){
   if(user.insurance_photo&&insThumb&&insPreview){insThumb.src=user.insurance_photo;insPreview.style.display='block';}
 
   // Show status banner
-  // Show/hide home CTA banner
+  // Don't update banners if the onboarding modal is currently open
+  const onboardModal = document.getElementById('driver-onboard-modal');
+  if(onboardModal && onboardModal.style.display === 'flex') return;
+
+  // Show/hide home CTA banner and earn panel CTA
+  const earnCta = document.getElementById('earn-driver-cta');
   const homeCta = document.getElementById('home-driver-cta');
   const homeCtaStatus = document.getElementById('home-driver-cta-status');
   if(homeCta){
     if(!user.driver_approved){
       homeCta.style.display = 'block';
+      if(earnCta) earnCta.style.display = 'block';
       if(homeCtaStatus){
         if(user.license_photo && user.insurance_photo){
           homeCtaStatus.textContent = '⏳ Documents submitted — under review. Usually approved within 24 hours.';
@@ -2976,6 +2994,7 @@ function updateVerificationStatus(user){
       }
     } else {
       homeCta.style.display = 'none';
+      if(earnCta) earnCta.style.display = 'none';
     }
   }
 
